@@ -1,3 +1,9 @@
-// custom errors placeholder
-class AppError extends Error {}
-module.exports = { AppError };
+'use strict';
+
+const AppError = require('./AppError');
+const errorCodes = require('./errorCodes');
+
+module.exports = {
+  AppError,
+  errorCodes,
+};
