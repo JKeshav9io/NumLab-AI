@@ -1,76 +1,47 @@
-# NumLab AI
+# NumLab AI Backend
 
-Interactive Scientific Computing & Numerical Methods Visual Lab
+NumLab AI Backend is a JavaScript Node.js/Express API for a numerical methods learning platform. It runs deterministic scientific computing solvers and returns structured results for students, including iteration data, final answers, warnings, optional graph data, and optional explanation text.
 
-NumLab AI solves numerical methods problems using deterministic custom algorithms, then uses AI only to explain the verified results.
+The project is focused on making numerical methods easier to inspect, visualize, and learn from step by step.
 
-> Algorithm solves. AI explains. Graphs visualize. Reports document.
+## Features
 
-## Why This Project
-
-Students studying numerical methods often need more than a final answer. They need iteration tables, formulas, substitutions, convergence behavior, graphs, and lab-report-ready explanations.
-
-Most online calculators focus on the final result. Large language models can explain concepts, but they should not be trusted as the calculator for numerical work because they may skip steps or make arithmetic mistakes.
-
-NumLab AI is designed as a practical scientific computing lab: accurate like a calculator, visual like a graphing tool, explanatory like a tutor, and structured like a lab-report generator.
-
-## Planned Features
-
-- Root finding methods: Bisection, Newton-Raphson, Secant, and Regula Falsi.
-- Linear system solvers: Gauss Elimination, Jacobi, and Gauss-Seidel.
-- Interpolation, ODE solvers, and numerical integration modules.
-- Iteration tables with expandable formula, substitution, calculation, and decision steps.
-- Graph data for function curves, convergence charts, interpolation curves, ODE curves, and method comparisons.
-- AI explanations based only on verified solver output.
-- PDF reports for lab records and assignment documentation.
-- Saved history for rerunning, duplicating, and exporting previous problems.
-
-## Current Status
-
-This repository currently contains an early production-oriented Node.js backend scaffold with the first solver endpoint implemented.
-
-Implemented so far:
-
-- Express app factory and server bootstrap.
-- CommonJS-based Node.js source files.
-- Environment validation and structured pino logging.
-- Standard error handling and success response envelopes.
+- Express REST API.
 - Health check endpoint.
-- Root-finding solvers with validation, iteration data, explanation text, graph-ready points, and tests:
-  Bisection, Newton-Raphson, Secant, and Regula Falsi.
-- Linear system solvers for `n x n` matrices with step data and tests:
-  Gauss Elimination, Jacobi, and Gauss-Seidel.
-- Placeholder modules for solvers, explanations, reports, auth, users, and problems.
-
-Still planned:
-
-- Remaining solver algorithm implementations.
-- Additional Express API routes.
-- Request validation and structured error handling.
-- Database integration.
-- AI provider integration.
-- PDF report generation.
-- Broader unit and integration tests.
-- Flutter frontend application.
+- Root-finding solvers:
+  - Bisection
+  - Newton-Raphson
+  - Secant
+  - Regula Falsi
+- Linear algebra solvers:
+  - Gauss Elimination
+  - Jacobi
+  - Gauss-Seidel
+- Interpolation solvers:
+  - Lagrange Interpolation
+  - Newton Divided Difference
+  - Natural Cubic Spline
+  - Quadratic Interpolation
+- Joi request validation.
+- Structured success and error responses.
+- Request logging with pino.
+- Rate limiting for solver routes.
+- Safe math expression parsing with mathjs.
+- Jest test suite.
 
 ## Tech Stack
 
-Current backend:
-
 - Node.js
+- JavaScript
 - Express
-- CommonJS modules
-- Joi validation
-- mathjs expression parsing
-- Jest tests
-
-Planned stack:
-
-- Flutter mobile frontend
-- Node.js backend APIs
-- PostgreSQL database
-- Explanation-only AI service
-- PDF report generation
+- mathjs
+- Joi
+- pino
+- Jest
+- helmet
+- cors
+- express-rate-limit
+- dotenv
 
 ## Project Structure
 
@@ -79,40 +50,116 @@ numlab-backend/
   src/
     app.js
     server.js
-    modules/
-      solvers/
-      explanations/
-      reports/
-    common/
     config/
+      env.js
+      logger.js
+    common/
+      errors/
+      middleware/
+      utils/
+      validators/
+      types/
+    modules/
+      auth/
+      explanations/
+      problems/
+      reports/
+      solvers/
+        solvers.routes.js
+        solvers.controller.js
+        solvers.service.js
+        solvers.validator.js
+        rootFinding/
+        linearAlgebra/
+        interpolation/
+        ode/
+        integration/
+      users/
     tests/
+  .env.example
   package.json
 ```
 
-## Planned API Interfaces
+Key files and folders:
 
-Implemented:
+- `src/app.js`: Express app factory and middleware setup.
+- `src/server.js`: Starts the HTTP server.
+- `src/config`: Environment validation and logger setup.
+- `src/common`: Shared errors, middleware, and utilities.
+- `src/modules/solvers`: Solver routes, controllers, service orchestration, and validation.
+- `src/modules/solvers/rootFinding`: Root-finding solver implementations.
+- `src/modules/solvers/linearAlgebra`: Linear algebra solver implementations.
+- `src/modules/solvers/interpolation`: Interpolation solver implementations.
+- `src/tests`: Jest tests for configuration, API routes, and solver services.
+
+## Getting Started
+
+Clone the repository:
+
+```bash
+git clone <repository-url>
+cd numlab-backend
+```
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Create an environment file:
+
+```bash
+cp .env.example .env
+```
+
+On Windows:
+
+```cmd
+copy .env.example .env
+```
+
+Run the development server:
+
+```bash
+npm run dev
+```
+
+Run tests:
+
+```bash
+npm test
+```
+
+## Environment Variables
+
+Environment variables are documented in `.env.example`. Create a local `.env` file before running the server.
+
+Do not commit real secrets or production credentials.
+
+## API Endpoints
 
 ```text
 GET  /health
+
 POST /api/v1/solve/root/bisection
 POST /api/v1/solve/root/newton
 POST /api/v1/solve/root/secant
 POST /api/v1/solve/root/regula-falsi
+
 POST /api/v1/solve/linear/gauss-elimination
 POST /api/v1/solve/linear/jacobi
 POST /api/v1/solve/linear/gauss-seidel
+
+POST /api/v1/solve/interpolation/lagrange
+POST /api/v1/solve/interpolation/newton-divided-difference
+POST /api/v1/solve/interpolation/natural-cubic-spline
+POST /api/v1/solve/interpolation/quadratic
 ```
 
-Planned:
+## Example Requests
 
-```text
-POST /api/v1/compare/root
-POST /api/v1/explain/:runId
-POST /api/v1/reports/:runId
-```
-
-### Bisection Request
+### Bisection
 
 ```json
 {
@@ -126,7 +173,7 @@ POST /api/v1/reports/:runId
 }
 ```
 
-### Newton-Raphson Request
+### Newton-Raphson
 
 ```json
 {
@@ -136,41 +183,45 @@ POST /api/v1/reports/:runId
   "tolerance": 0.0001,
   "maxIterations": 100,
   "includeExplanation": true,
-  "includeGraphData": false
+  "includeGraphData": true
 }
 ```
 
-If `derivativeEquation` is omitted, the backend uses a numerical derivative and returns a warning.
-
-### Secant Request
+### Gauss-Seidel
 
 ```json
 {
-  "equation": "x^3 - x - 2",
-  "firstGuess": 1,
-  "secondGuess": 2,
+  "matrix": [
+    [10, -1, 2],
+    [-1, 11, -1],
+    [2, -1, 10]
+  ],
+  "constants": [6, 25, -11],
+  "initialGuess": [0, 0, 0],
   "tolerance": 0.0001,
   "maxIterations": 100,
-  "includeExplanation": true,
-  "includeGraphData": false
+  "includeExplanation": true
 }
 ```
 
-### Regula Falsi Request
+### Lagrange Interpolation
 
 ```json
 {
-  "equation": "x^3 - x - 2",
-  "lowerBound": 1,
-  "upperBound": 2,
-  "tolerance": 0.0001,
-  "maxIterations": 100,
+  "points": [
+    { "x": 0, "y": 1 },
+    { "x": 1, "y": 3 },
+    { "x": 2, "y": 2 }
+  ],
+  "targetX": 1.5,
   "includeExplanation": true,
-  "includeGraphData": false
+  "includeGraphData": true
 }
 ```
 
-### Root-Finding Response Shape
+## Response Format
+
+Success responses use this envelope:
 
 ```json
 {
@@ -178,127 +229,10 @@ If `derivativeEquation` is omitted, the backend uses a numerical derivative and 
   "data": {
     "method": "Bisection Method",
     "status": "converged",
-    "input": {
-      "equation": "x^3 - x - 2",
-      "lowerBound": 1,
-      "upperBound": 2,
-      "tolerance": 0.0001,
-      "maxIterations": 100
-    },
-    "iterations": [
-      {
-        "iteration": 1,
-        "a": 1,
-        "b": 2,
-        "c": 1.5,
-        "fA": -2,
-        "fB": 4,
-        "fC": -0.125,
-        "formulaTemplate": "c = (a + b) / 2",
-        "substitution": "c = (1 + 2) / 2 = 1.5",
-        "error": 0.5,
-        "tolerance": 0.0001,
-        "decision": "Root lies in [c, b], continue"
-      }
-    ],
-    "finalAnswer": {
-      "root": 1.5214233398,
-      "functionValue": 0.000246585,
-      "iterationsUsed": 14,
-      "converged": true,
-      "reason": "Tolerance reached"
-    },
-    "explanation": {
-      "summary": "The bisection method converged because the interval was repeatedly halved until tolerance reached.",
-      "steps": []
-    },
-    "graphData": [{ "x": 1, "y": -2 }],
-    "warnings": [],
-    "executionTimeMs": 2
-  },
-  "meta": {
-    "requestId": "request-id",
-    "timestamp": "2026-05-26T00:00:00.000Z"
-  }
-}
-```
-
-### Gauss Elimination Request
-
-```json
-{
-  "matrix": [
-    [10, -1, 2],
-    [-1, 11, -1],
-    [2, -1, 10]
-  ],
-  "constants": [6, 25, -11],
-  "includeExplanation": true
-}
-```
-
-### Jacobi Request
-
-```json
-{
-  "matrix": [
-    [10, -1, 2],
-    [-1, 11, -1],
-    [2, -1, 10]
-  ],
-  "constants": [6, 25, -11],
-  "initialGuess": [0, 0, 0],
-  "tolerance": 0.0001,
-  "maxIterations": 100,
-  "includeExplanation": true
-}
-```
-
-### Gauss-Seidel Request
-
-```json
-{
-  "matrix": [
-    [10, -1, 2],
-    [-1, 11, -1],
-    [2, -1, 10]
-  ],
-  "constants": [6, 25, -11],
-  "initialGuess": [0, 0, 0],
-  "tolerance": 0.0001,
-  "maxIterations": 100,
-  "includeExplanation": true
-}
-```
-
-### Linear Algebra Response Shape
-
-```json
-{
-  "success": true,
-  "data": {
-    "method": "Gauss Elimination",
-    "status": "converged",
-    "input": {
-      "matrix": [[10, -1, 2], [-1, 11, -1], [2, -1, 10]],
-      "constants": [6, 25, -11]
-    },
+    "input": {},
     "iterations": [],
-    "finalAnswer": {
-      "solution": [1.0432692308, 2.2692307692, -1.0817307692],
-      "residuals": [0, 0, 0],
-      "variables": {
-        "x1": 1.0432692308,
-        "x2": 2.2692307692,
-        "x3": -1.0817307692
-      },
-      "converged": true,
-      "reason": "Back substitution completed"
-    },
-    "explanation": {
-      "summary": "Gauss Elimination solved the linear system because back substitution completed.",
-      "steps": []
-    },
+    "finalAnswer": {},
+    "explanation": null,
     "graphData": [],
     "warnings": [],
     "executionTimeMs": 2
@@ -310,52 +244,36 @@ If `derivativeEquation` is omitted, the backend uses a numerical derivative and 
 }
 ```
 
-## How to Run
+Error responses use this envelope:
 
-From the backend project directory:
-
-```bash
-cp .env.example .env
-npm install
-npm start
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Validation failed",
+    "details": {}
+  }
+}
 ```
 
-Or from the parent project directory:
+## Current Status
 
-```bash
-cd numlab-backend
-cp .env.example .env
-npm install
-npm start
-```
+- Implemented solver APIs for root finding, linear algebra, and interpolation.
+- Other modules are planned but not implemented yet.
 
-The backend validates required environment variables at startup. For local development, create `.env` from `.env.example` and update values as needed.
+## Planned Improvements
 
-Run tests:
+- ODE solvers.
+- Numerical integration solvers.
+- AI explanations based on computed results.
+- PDF reports.
+- Saved history.
+- Authentication.
 
-```bash
-npm test
-```
+## Safety And Numerical Integrity
 
-Run in development mode:
-
-```bash
-npm run dev
-```
-
-## Roadmap
-
-1. Add Gauss-Jordan and LU decomposition solvers.
-2. Add method comparison endpoints for root-finding and iterative linear solvers.
-3. Add database-backed history and stored runs.
-4. Add the AI explanation service using verified solver results only.
-5. Add PDF reports and saved history.
-6. Build the Flutter frontend.
-
-## Product Rule
-
-AI must not calculate roots, matrix solutions, interpolation values, ODE tables, or integration values. The deterministic solver engine owns the computation. AI only explains the computed payload, convergence behavior, warnings, and lab-report wording.
-
-## Intended Audience
-
-NumLab AI is aimed at engineering, mathematics, physics, computer science, and data science students studying Numerical Methods or Scientific Computing.
+- Solvers are deterministic and run in backend code.
+- mathjs is used for expression parsing.
+- `eval()` and `new Function()` should not be used for math evaluation.
+- AI, when added later, should only explain computed results and must not calculate numerical answers.

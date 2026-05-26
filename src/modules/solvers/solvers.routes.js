@@ -13,5 +13,9 @@ router.post('/root/regula-falsi', asyncHandler(solversController.solveRegulaFals
 router.post('/linear/gauss-elimination', asyncHandler(solversController.solveGaussElimination));
 router.post('/linear/jacobi', asyncHandler(solversController.solveJacobi));
 router.post('/linear/gauss-seidel', asyncHandler(solversController.solveGaussSeidel));
+router.post('/interpolation/lagrange', asyncHandler(solversController.solveLagrangeInterpolation));
+router.post('/interpolation/newton-divided-difference', asyncHandler(solversController.solveNewtonDividedDifference));
+router.post('/interpolation/natural-cubic-spline', asyncHandler(solversController.solveNaturalCubicSpline));
+router.post('/interpolation/quadratic', asyncHandler(solversController.solveQuadraticInterpolation));
 
 module.exports = router;

@@ -9,6 +9,10 @@ const {
   validateGaussElimination,
   validateJacobi,
   validateGaussSeidel,
+  validateLagrangeInterpolation,
+  validateNewtonDividedDifference,
+  validateNaturalCubicSpline,
+  validateQuadraticInterpolation,
 } = require('./solvers.validator');
 const { sendSuccess } = require('../../common/utils');
 
@@ -61,6 +65,34 @@ function solveGaussSeidel(req, res) {
   return sendSuccess(res, result, req.id);
 }
 
+function solveLagrangeInterpolation(req, res) {
+  const params = validateLagrangeInterpolation(req.body);
+  const result = solversService.runLagrangeInterpolation(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveNewtonDividedDifference(req, res) {
+  const params = validateNewtonDividedDifference(req.body);
+  const result = solversService.runNewtonDividedDifference(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveNaturalCubicSpline(req, res) {
+  const params = validateNaturalCubicSpline(req.body);
+  const result = solversService.runNaturalCubicSpline(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveQuadraticInterpolation(req, res) {
+  const params = validateQuadraticInterpolation(req.body);
+  const result = solversService.runQuadraticInterpolation(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
 module.exports = {
   solveBisection,
   solveNewtonRaphson,
@@ -69,4 +101,8 @@ module.exports = {
   solveGaussElimination,
   solveJacobi,
   solveGaussSeidel,
+  solveLagrangeInterpolation,
+  solveNewtonDividedDifference,
+  solveNaturalCubicSpline,
+  solveQuadraticInterpolation,
 };

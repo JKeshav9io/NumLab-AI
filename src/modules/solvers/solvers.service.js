@@ -8,6 +8,10 @@ const { solveRegulaFalsi } = require('./rootFinding/regulaFalsi.service');
 const { solveGaussElimination } = require('./linearAlgebra/gaussElimination.service');
 const { solveJacobi } = require('./linearAlgebra/jacobi.service');
 const { solveGaussSeidel } = require('./linearAlgebra/gaussSeidel.service');
+const { solveLagrangeInterpolation } = require('./interpolation/lagrange.service');
+const { solveNewtonDividedDifference } = require('./interpolation/newtonDividedDifference.service');
+const { solveNaturalCubicSpline } = require('./interpolation/naturalCubicSpline.service');
+const { solveQuadraticInterpolation } = require('./interpolation/quadraticInterpolation.service');
 
 function runBisection(params, context = {}) {
   return runRootSolver('root/bisection', solveBisection, params, context);
@@ -37,6 +41,22 @@ function runGaussSeidel(params, context = {}) {
   return runSolver('linear/gauss-seidel', solveGaussSeidel, params, context);
 }
 
+function runLagrangeInterpolation(params, context = {}) {
+  return runSolver('interpolation/lagrange', solveLagrangeInterpolation, params, context);
+}
+
+function runNewtonDividedDifference(params, context = {}) {
+  return runSolver('interpolation/newton-divided-difference', solveNewtonDividedDifference, params, context);
+}
+
+function runNaturalCubicSpline(params, context = {}) {
+  return runSolver('interpolation/natural-cubic-spline', solveNaturalCubicSpline, params, context);
+}
+
+function runQuadraticInterpolation(params, context = {}) {
+  return runSolver('interpolation/quadratic', solveQuadraticInterpolation, params, context);
+}
+
 function runRootSolver(method, solver, params, context) {
   return runSolver(method, solver, params, context);
 }
@@ -64,4 +84,8 @@ module.exports = {
   runGaussElimination,
   runJacobi,
   runGaussSeidel,
+  runLagrangeInterpolation,
+  runNewtonDividedDifference,
+  runNaturalCubicSpline,
+  runQuadraticInterpolation,
 };

@@ -3,6 +3,8 @@
 const Joi = require('joi');
 const { AppError, errorCodes } = require('../../common/errors');
 
+const INTERPOLATION_NEAR_ZERO_THRESHOLD = 1e-12;
+
 const bisectionSchema = Joi.object({
   equation: Joi.string().trim().max(500).required(),
   lowerBound: Joi.number().required(),
@@ -76,6 +78,18 @@ const iterativeLinearSchema = Joi.object({
   includeExplanation: Joi.boolean().default(true),
 });
 
+const interpolationPointSchema = Joi.object({
+  x: Joi.number().required(),
+  y: Joi.number().required(),
+}).required();
+
+const interpolationSchema = Joi.object({
+  points: Joi.array().items(interpolationPointSchema).min(2).max(100).required(),
+  targetX: Joi.number().required(),
+  includeExplanation: Joi.boolean().default(true),
+  includeGraphData: Joi.boolean().default(true),
+});
+
 function validateBisection(body) {
   return validateWithSchema(bisectionSchema, body);
 }
@@ -102,6 +116,35 @@ function validateJacobi(body) {
 
 function validateGaussSeidel(body) {
   return validateLinearSystem(iterativeLinearSchema, body, { requireInitialGuess: false });
+}
+
+function validateLagrangeInterpolation(body) {
+  return validateInterpolation(interpolationSchema, body, {
+    minPoints: 2,
+    methodName: 'Lagrange interpolation',
+  });
+}
+
+function validateNewtonDividedDifference(body) {
+  return validateInterpolation(interpolationSchema, body, {
+    minPoints: 2,
+    methodName: 'Newton divided difference',
+  });
+}
+
+function validateNaturalCubicSpline(body) {
+  return validateInterpolation(interpolationSchema, body, {
+    minPoints: 3,
+    methodName: 'Natural cubic spline',
+    validateSpacing: true,
+  });
+}
+
+function validateQuadraticInterpolation(body) {
+  return validateInterpolation(interpolationSchema, body, {
+    minPoints: 3,
+    methodName: 'Quadratic interpolation',
+  });
 }
 
 function validateWithSchema(schema, body) {
@@ -167,6 +210,79 @@ function validateLinearSystem(schema, body) {
   return value;
 }
 
+function validateInterpolation(schema, body, options) {
+  const value = validateWithSchema(schema, body);
+  const errors = [];
+
+  if (value.points.length < options.minPoints) {
+    errors.push({
+      field: 'points',
+      message: `${options.methodName} requires at least ${options.minPoints} points`,
+    });
+  }
+
+  if (!Number.isFinite(value.targetX)) {
+    errors.push({
+      field: 'targetX',
+      message: 'targetX must be a finite number',
+    });
+  }
+
+  const seenXValues = new Set();
+
+  value.points.forEach((point, index) => {
+    if (!Number.isFinite(point.x)) {
+      errors.push({
+        field: `points.${index}.x`,
+        message: 'x must be a finite number',
+      });
+    }
+
+    if (!Number.isFinite(point.y)) {
+      errors.push({
+        field: `points.${index}.y`,
+        message: 'y must be a finite number',
+      });
+    }
+
+    if (seenXValues.has(point.x)) {
+      errors.push({
+        field: `points.${index}.x`,
+        message: 'x values must be unique',
+      });
+    }
+
+    seenXValues.add(point.x);
+  });
+
+  if (options.validateSpacing) {
+    const sortedPoints = value.points.slice().sort((a, b) => a.x - b.x);
+
+    for (let index = 0; index < sortedPoints.length - 1; index++) {
+      const intervalWidth = sortedPoints[index + 1].x - sortedPoints[index].x;
+
+      if (Math.abs(intervalWidth) < INTERPOLATION_NEAR_ZERO_THRESHOLD) {
+        errors.push({
+          field: 'points',
+          message: 'natural cubic spline interval width is too close to zero',
+        });
+        break;
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new AppError(
+      'Validation failed',
+      400,
+      errorCodes.VALIDATION_ERROR,
+      { fields: errors }
+    );
+  }
+
+  return value;
+}
+
 module.exports = {
   validateBisection,
   validateNewtonRaphson,
@@ -175,4 +291,8 @@ module.exports = {
   validateGaussElimination,
   validateJacobi,
   validateGaussSeidel,
+  validateLagrangeInterpolation,
+  validateNewtonDividedDifference,
+  validateNaturalCubicSpline,
+  validateQuadraticInterpolation,
 };
