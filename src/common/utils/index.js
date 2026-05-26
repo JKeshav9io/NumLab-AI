@@ -1,4 +1,7 @@
-// common utilities placeholder
+'use strict';
+
+const asyncHandler = require('./asyncHandler');
+
 module.exports = {
-  noop: () => {}
+  asyncHandler,
 };
