@@ -21,8 +21,54 @@ const bisectionSchema = Joi.object({
   'bounds.ordered': 'lowerBound must be less than upperBound',
 });
 
+const newtonRaphsonSchema = Joi.object({
+  equation: Joi.string().trim().max(500).required(),
+  derivativeEquation: Joi.string().trim().max(500).optional(),
+  initialGuess: Joi.number().required(),
+  tolerance: Joi.number().positive().max(1).default(0.0001),
+  maxIterations: Joi.number().integer().min(1).max(1000).default(100),
+  includeExplanation: Joi.boolean().default(true),
+  includeGraphData: Joi.boolean().default(true),
+});
+
+const secantSchema = Joi.object({
+  equation: Joi.string().trim().max(500).required(),
+  firstGuess: Joi.number().required(),
+  secondGuess: Joi.number().required(),
+  tolerance: Joi.number().positive().max(1).default(0.0001),
+  maxIterations: Joi.number().integer().min(1).max(1000).default(100),
+  includeExplanation: Joi.boolean().default(true),
+  includeGraphData: Joi.boolean().default(true),
+}).custom((value, helpers) => {
+  if (value.firstGuess === value.secondGuess) {
+    return helpers.error('guesses.distinct');
+  }
+
+  return value;
+}).messages({
+  'guesses.distinct': 'firstGuess and secondGuess must be different',
+});
+
+const regulaFalsiSchema = bisectionSchema;
+
 function validateBisection(body) {
-  const { error, value } = bisectionSchema.validate(body, {
+  return validateWithSchema(bisectionSchema, body);
+}
+
+function validateNewtonRaphson(body) {
+  return validateWithSchema(newtonRaphsonSchema, body);
+}
+
+function validateSecant(body) {
+  return validateWithSchema(secantSchema, body);
+}
+
+function validateRegulaFalsi(body) {
+  return validateWithSchema(regulaFalsiSchema, body);
+}
+
+function validateWithSchema(schema, body) {
+  const { error, value } = schema.validate(body, {
     abortEarly: false,
     stripUnknown: true,
   });
@@ -46,4 +92,7 @@ function validateBisection(body) {
 
 module.exports = {
   validateBisection,
+  validateNewtonRaphson,
+  validateSecant,
+  validateRegulaFalsi,
 };

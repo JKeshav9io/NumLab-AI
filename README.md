@@ -36,7 +36,8 @@ Implemented so far:
 - Environment validation and structured pino logging.
 - Standard error handling and success response envelopes.
 - Health check endpoint.
-- Bisection Method solver with validation, iteration data, explanation text, graph-ready points, and tests.
+- Root-finding solvers with validation, iteration data, explanation text, graph-ready points, and tests:
+  Bisection, Newton-Raphson, Secant, and Regula Falsi.
 - Placeholder modules for solvers, explanations, reports, auth, users, and problems.
 
 Still planned:
@@ -93,12 +94,14 @@ Implemented:
 ```text
 GET  /health
 POST /api/v1/solve/root/bisection
+POST /api/v1/solve/root/newton
+POST /api/v1/solve/root/secant
+POST /api/v1/solve/root/regula-falsi
 ```
 
 Planned:
 
 ```text
-POST /api/v1/solve/root/newton
 POST /api/v1/compare/root
 POST /api/v1/explain/:runId
 POST /api/v1/reports/:runId
@@ -118,7 +121,51 @@ POST /api/v1/reports/:runId
 }
 ```
 
-### Bisection Response Shape
+### Newton-Raphson Request
+
+```json
+{
+  "equation": "x^3 - x - 2",
+  "derivativeEquation": "3*x^2 - 1",
+  "initialGuess": 1.5,
+  "tolerance": 0.0001,
+  "maxIterations": 100,
+  "includeExplanation": true,
+  "includeGraphData": false
+}
+```
+
+If `derivativeEquation` is omitted, the backend uses a numerical derivative and returns a warning.
+
+### Secant Request
+
+```json
+{
+  "equation": "x^3 - x - 2",
+  "firstGuess": 1,
+  "secondGuess": 2,
+  "tolerance": 0.0001,
+  "maxIterations": 100,
+  "includeExplanation": true,
+  "includeGraphData": false
+}
+```
+
+### Regula Falsi Request
+
+```json
+{
+  "equation": "x^3 - x - 2",
+  "lowerBound": 1,
+  "upperBound": 2,
+  "tolerance": 0.0001,
+  "maxIterations": 100,
+  "includeExplanation": true,
+  "includeGraphData": false
+}
+```
+
+### Root-Finding Response Shape
 
 ```json
 {
@@ -206,9 +253,9 @@ npm run dev
 
 ## Roadmap
 
-1. Implement remaining root-finding solvers and unit tests.
+1. Add method comparison endpoints for root-finding.
 2. Add database-backed history and stored runs.
-3. Add graph data generation and method comparison.
+3. Implement linear algebra solvers and tests.
 4. Add the AI explanation service using verified solver results only.
 5. Add PDF reports and saved history.
 6. Build the Flutter frontend.

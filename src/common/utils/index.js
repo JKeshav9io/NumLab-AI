@@ -2,7 +2,7 @@
 
 const asyncHandler = require('./asyncHandler');
 const { buildSuccessResponse, sendSuccess } = require('./response');
-const { compileExpression, evaluateAt } = require('./mathParser');
+const { compileExpression, evaluateAt, numericalDerivative } = require('./mathParser');
 
 module.exports = {
   asyncHandler,
@@ -10,4 +10,5 @@ module.exports = {
   sendSuccess,
   compileExpression,
   evaluateAt,
+  numericalDerivative,
 };

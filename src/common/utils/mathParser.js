@@ -34,7 +34,15 @@ function evaluateAt(compiled, scope) {
   }
 }
 
+function numericalDerivative(compiled, x, h = 1e-7) {
+  const forward = evaluateAt(compiled, { x: x + h });
+  const backward = evaluateAt(compiled, { x: x - h });
+
+  return (forward - backward) / (2 * h);
+}
+
 module.exports = {
   compileExpression,
   evaluateAt,
+  numericalDerivative,
 };
