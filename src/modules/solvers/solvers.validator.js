@@ -51,6 +51,31 @@ const secantSchema = Joi.object({
 
 const regulaFalsiSchema = bisectionSchema;
 
+const matrixSchema = Joi.array()
+  .items(Joi.array().items(Joi.number().required()).min(1).required())
+  .min(1)
+  .required();
+
+const constantsSchema = Joi.array()
+  .items(Joi.number().required())
+  .min(1)
+  .required();
+
+const gaussEliminationSchema = Joi.object({
+  matrix: matrixSchema,
+  constants: constantsSchema,
+  includeExplanation: Joi.boolean().default(true),
+});
+
+const iterativeLinearSchema = Joi.object({
+  matrix: matrixSchema,
+  constants: constantsSchema,
+  initialGuess: Joi.array().items(Joi.number().required()).min(1).optional(),
+  tolerance: Joi.number().positive().max(1).default(0.0001),
+  maxIterations: Joi.number().integer().min(1).max(10000).default(100),
+  includeExplanation: Joi.boolean().default(true),
+});
+
 function validateBisection(body) {
   return validateWithSchema(bisectionSchema, body);
 }
@@ -65,6 +90,18 @@ function validateSecant(body) {
 
 function validateRegulaFalsi(body) {
   return validateWithSchema(regulaFalsiSchema, body);
+}
+
+function validateGaussElimination(body) {
+  return validateLinearSystem(gaussEliminationSchema, body, { requireInitialGuess: false });
+}
+
+function validateJacobi(body) {
+  return validateLinearSystem(iterativeLinearSchema, body, { requireInitialGuess: false });
+}
+
+function validateGaussSeidel(body) {
+  return validateLinearSystem(iterativeLinearSchema, body, { requireInitialGuess: false });
 }
 
 function validateWithSchema(schema, body) {
@@ -90,9 +127,52 @@ function validateWithSchema(schema, body) {
   return value;
 }
 
+function validateLinearSystem(schema, body) {
+  const value = validateWithSchema(schema, body);
+  const size = value.matrix.length;
+  const dimensionErrors = [];
+
+  value.matrix.forEach((row, rowIndex) => {
+    if (row.length !== size) {
+      dimensionErrors.push({
+        field: `matrix.${rowIndex}`,
+        message: `matrix row ${rowIndex + 1} must contain exactly ${size} values`,
+      });
+    }
+  });
+
+  if (value.constants.length !== size) {
+    dimensionErrors.push({
+      field: 'constants',
+      message: `constants must contain exactly ${size} values`,
+    });
+  }
+
+  if (value.initialGuess && value.initialGuess.length !== size) {
+    dimensionErrors.push({
+      field: 'initialGuess',
+      message: `initialGuess must contain exactly ${size} values`,
+    });
+  }
+
+  if (dimensionErrors.length > 0) {
+    throw new AppError(
+      'Validation failed',
+      400,
+      errorCodes.VALIDATION_ERROR,
+      { fields: dimensionErrors }
+    );
+  }
+
+  return value;
+}
+
 module.exports = {
   validateBisection,
   validateNewtonRaphson,
   validateSecant,
   validateRegulaFalsi,
+  validateGaussElimination,
+  validateJacobi,
+  validateGaussSeidel,
 };

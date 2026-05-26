@@ -10,5 +10,8 @@ router.post('/root/bisection', asyncHandler(solversController.solveBisection));
 router.post('/root/newton', asyncHandler(solversController.solveNewtonRaphson));
 router.post('/root/secant', asyncHandler(solversController.solveSecant));
 router.post('/root/regula-falsi', asyncHandler(solversController.solveRegulaFalsi));
+router.post('/linear/gauss-elimination', asyncHandler(solversController.solveGaussElimination));
+router.post('/linear/jacobi', asyncHandler(solversController.solveJacobi));
+router.post('/linear/gauss-seidel', asyncHandler(solversController.solveGaussSeidel));
 
 module.exports = router;

@@ -38,6 +38,8 @@ Implemented so far:
 - Health check endpoint.
 - Root-finding solvers with validation, iteration data, explanation text, graph-ready points, and tests:
   Bisection, Newton-Raphson, Secant, and Regula Falsi.
+- Linear system solvers for `n x n` matrices with step data and tests:
+  Gauss Elimination, Jacobi, and Gauss-Seidel.
 - Placeholder modules for solvers, explanations, reports, auth, users, and problems.
 
 Still planned:
@@ -97,6 +99,9 @@ POST /api/v1/solve/root/bisection
 POST /api/v1/solve/root/newton
 POST /api/v1/solve/root/secant
 POST /api/v1/solve/root/regula-falsi
+POST /api/v1/solve/linear/gauss-elimination
+POST /api/v1/solve/linear/jacobi
+POST /api/v1/solve/linear/gauss-seidel
 ```
 
 Planned:
@@ -218,6 +223,93 @@ If `derivativeEquation` is omitted, the backend uses a numerical derivative and 
 }
 ```
 
+### Gauss Elimination Request
+
+```json
+{
+  "matrix": [
+    [10, -1, 2],
+    [-1, 11, -1],
+    [2, -1, 10]
+  ],
+  "constants": [6, 25, -11],
+  "includeExplanation": true
+}
+```
+
+### Jacobi Request
+
+```json
+{
+  "matrix": [
+    [10, -1, 2],
+    [-1, 11, -1],
+    [2, -1, 10]
+  ],
+  "constants": [6, 25, -11],
+  "initialGuess": [0, 0, 0],
+  "tolerance": 0.0001,
+  "maxIterations": 100,
+  "includeExplanation": true
+}
+```
+
+### Gauss-Seidel Request
+
+```json
+{
+  "matrix": [
+    [10, -1, 2],
+    [-1, 11, -1],
+    [2, -1, 10]
+  ],
+  "constants": [6, 25, -11],
+  "initialGuess": [0, 0, 0],
+  "tolerance": 0.0001,
+  "maxIterations": 100,
+  "includeExplanation": true
+}
+```
+
+### Linear Algebra Response Shape
+
+```json
+{
+  "success": true,
+  "data": {
+    "method": "Gauss Elimination",
+    "status": "converged",
+    "input": {
+      "matrix": [[10, -1, 2], [-1, 11, -1], [2, -1, 10]],
+      "constants": [6, 25, -11]
+    },
+    "iterations": [],
+    "finalAnswer": {
+      "solution": [1.0432692308, 2.2692307692, -1.0817307692],
+      "residuals": [0, 0, 0],
+      "variables": {
+        "x1": 1.0432692308,
+        "x2": 2.2692307692,
+        "x3": -1.0817307692
+      },
+      "converged": true,
+      "reason": "Back substitution completed"
+    },
+    "explanation": {
+      "summary": "Gauss Elimination solved the linear system because back substitution completed.",
+      "steps": []
+    },
+    "graphData": [],
+    "warnings": [],
+    "executionTimeMs": 2
+  },
+  "meta": {
+    "requestId": "request-id",
+    "timestamp": "2026-05-26T00:00:00.000Z"
+  }
+}
+```
+
 ## How to Run
 
 From the backend project directory:
@@ -253,9 +345,9 @@ npm run dev
 
 ## Roadmap
 
-1. Add method comparison endpoints for root-finding.
-2. Add database-backed history and stored runs.
-3. Implement linear algebra solvers and tests.
+1. Add Gauss-Jordan and LU decomposition solvers.
+2. Add method comparison endpoints for root-finding and iterative linear solvers.
+3. Add database-backed history and stored runs.
 4. Add the AI explanation service using verified solver results only.
 5. Add PDF reports and saved history.
 6. Build the Flutter frontend.

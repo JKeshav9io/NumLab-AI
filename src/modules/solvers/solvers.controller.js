@@ -6,6 +6,9 @@ const {
   validateNewtonRaphson,
   validateSecant,
   validateRegulaFalsi,
+  validateGaussElimination,
+  validateJacobi,
+  validateGaussSeidel,
 } = require('./solvers.validator');
 const { sendSuccess } = require('../../common/utils');
 
@@ -37,9 +40,33 @@ function solveRegulaFalsi(req, res) {
   return sendSuccess(res, result, req.id);
 }
 
+function solveGaussElimination(req, res) {
+  const params = validateGaussElimination(req.body);
+  const result = solversService.runGaussElimination(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveJacobi(req, res) {
+  const params = validateJacobi(req.body);
+  const result = solversService.runJacobi(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveGaussSeidel(req, res) {
+  const params = validateGaussSeidel(req.body);
+  const result = solversService.runGaussSeidel(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
 module.exports = {
   solveBisection,
   solveNewtonRaphson,
   solveSecant,
   solveRegulaFalsi,
+  solveGaussElimination,
+  solveJacobi,
+  solveGaussSeidel,
 };
