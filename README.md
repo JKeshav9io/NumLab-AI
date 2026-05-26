@@ -27,24 +27,27 @@ NumLab AI is designed as a practical scientific computing lab: accurate like a c
 
 ## Current Status
 
-This repository currently contains an early Node.js backend scaffold.
+This repository currently contains an early production-oriented Node.js backend scaffold with the first solver endpoint implemented.
 
 Implemented so far:
 
-- Basic backend project structure.
-- CommonJS-based Node.js entry files.
+- Express app factory and server bootstrap.
+- CommonJS-based Node.js source files.
+- Environment validation and structured pino logging.
+- Standard error handling and success response envelopes.
+- Health check endpoint.
+- Bisection Method solver with validation, iteration data, explanation text, graph-ready points, and tests.
 - Placeholder modules for solvers, explanations, reports, auth, users, and problems.
-- Placeholder root-finding and linear algebra service files.
 
 Still planned:
 
-- Solver algorithm implementations.
-- Express API routes.
+- Remaining solver algorithm implementations.
+- Additional Express API routes.
 - Request validation and structured error handling.
 - Database integration.
 - AI provider integration.
 - PDF report generation.
-- Unit and integration tests.
+- Broader unit and integration tests.
 - Flutter frontend application.
 
 ## Tech Stack
@@ -54,6 +57,9 @@ Current backend:
 - Node.js
 - Express
 - CommonJS modules
+- Joi validation
+- mathjs expression parsing
+- Jest tests
 
 Planned stack:
 
@@ -82,39 +88,86 @@ numlab-backend/
 
 ## Planned API Interfaces
 
-These endpoints describe the intended API design. They are not implemented yet.
+Implemented:
+
+```text
+GET  /health
+POST /api/v1/solve/root/bisection
+```
+
+Planned:
 
 ```text
 POST /api/v1/solve/root/newton
-POST /api/v1/solve/root/bisection
 POST /api/v1/compare/root
 POST /api/v1/explain/:runId
 POST /api/v1/reports/:runId
 ```
 
-### Example Future Request
+### Bisection Request
 
 ```json
 {
-  "function": "x^3 - x - 2",
-  "initialGuess": 1.5,
+  "equation": "x^3 - x - 2",
+  "lowerBound": 1,
+  "upperBound": 2,
   "tolerance": 0.0001,
-  "maxIterations": 20
+  "maxIterations": 100,
+  "includeExplanation": true,
+  "includeGraphData": true
 }
 ```
 
-### Example Future Response
+### Bisection Response Shape
 
 ```json
 {
-  "status": "converged",
-  "finalAnswer": {
-    "root": 1.52138,
-    "finalError": 0.000001
+  "success": true,
+  "data": {
+    "method": "Bisection Method",
+    "status": "converged",
+    "input": {
+      "equation": "x^3 - x - 2",
+      "lowerBound": 1,
+      "upperBound": 2,
+      "tolerance": 0.0001,
+      "maxIterations": 100
+    },
+    "iterations": [
+      {
+        "iteration": 1,
+        "a": 1,
+        "b": 2,
+        "c": 1.5,
+        "fA": -2,
+        "fB": 4,
+        "fC": -0.125,
+        "formulaTemplate": "c = (a + b) / 2",
+        "substitution": "c = (1 + 2) / 2 = 1.5",
+        "error": 0.5,
+        "tolerance": 0.0001,
+        "decision": "Root lies in [c, b], continue"
+      }
+    ],
+    "finalAnswer": {
+      "root": 1.5214233398,
+      "functionValue": 0.000246585,
+      "iterationsUsed": 14,
+      "converged": true,
+      "reason": "Tolerance reached"
+    },
+    "explanation": {
+      "summary": "The bisection method converged because the interval was repeatedly halved until tolerance reached.",
+      "steps": []
+    },
+    "graphData": [{ "x": 1, "y": -2 }],
+    "warnings": [],
+    "executionTimeMs": 2
   },
-  "iterations": [],
-  "warnings": [],
-  "executionTimeMs": 8
+  "meta": {
+    "requestId": "request-id",
+    "timestamp": "2026-05-26T00:00:00.000Z"
+  }
 }
 ```
 
@@ -123,26 +176,38 @@ POST /api/v1/reports/:runId
 From the backend project directory:
 
 ```bash
+cp .env.example .env
 npm install
-node src/server.js
+npm start
 ```
 
 Or from the parent project directory:
 
 ```bash
 cd numlab-backend
+cp .env.example .env
 npm install
-node src/server.js
+npm start
 ```
 
-The current server starts a placeholder response on port `3000` unless `PORT` is set in the environment.
+The backend validates required environment variables at startup. For local development, create `.env` from `.env.example` and update values as needed.
 
-Testing is not ready yet. The current `npm test` script is still a placeholder.
+Run tests:
+
+```bash
+npm test
+```
+
+Run in development mode:
+
+```bash
+npm run dev
+```
 
 ## Roadmap
 
-1. Implement root-finding solvers and unit tests.
-2. Add REST endpoints and request validation.
+1. Implement remaining root-finding solvers and unit tests.
+2. Add database-backed history and stored runs.
 3. Add graph data generation and method comparison.
 4. Add the AI explanation service using verified solver results only.
 5. Add PDF reports and saved history.
