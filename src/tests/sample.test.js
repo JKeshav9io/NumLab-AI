@@ -38,3 +38,30 @@ describe('config foundation', () => {
     expect(typeof logger.error).toBe('function');
   });
 });
+
+describe('Express app foundation', () => {
+  test('GET /health returns ok', async () => {
+    jest.resetModules();
+    process.env.NODE_ENV = 'test';
+
+    const createApp = require('../app');
+    const app = createApp();
+    const server = app.listen(0);
+
+    try {
+      const { port } = server.address();
+      const response = await fetch(`http://127.0.0.1:${port}/health`);
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body).toEqual({ status: 'ok' });
+    } finally {
+      await new Promise((resolve, reject) => {
+        server.close((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    }
+  });
+});

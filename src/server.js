@@ -1,15 +1,11 @@
-// Simple server bootstrap placeholder
-const http = require('http');
-const app = require('./app');
+'use strict';
 
-const PORT = process.env.PORT || 3000;
+const env = require('./config/env');
+const logger = require('./config/logger');
+const createApp = require('./app');
 
-const server = http.createServer((req, res) => {
-  res.statusCode = 200;
-  res.setHeader('Content-Type', 'text/plain');
-  res.end('NumLab AI server placeholder');
-});
+const app = createApp();
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(env.PORT, () => {
+  logger.info(`NumLab API running on port ${env.PORT} [${env.NODE_ENV}]`);
 });
