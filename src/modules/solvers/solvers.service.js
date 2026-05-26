@@ -10,6 +10,9 @@ const { solveJacobi } = require('./linearAlgebra/jacobi.service');
 const { solveGaussSeidel } = require('./linearAlgebra/gaussSeidel.service');
 const { solveLagrangeInterpolation } = require('./interpolation/lagrange.service');
 const { solveNewtonDividedDifference } = require('./interpolation/newtonDividedDifference.service');
+const { solveNewtonForwardInterpolation } = require('./interpolation/newtonForward.service');
+const { solveNewtonBackwardInterpolation } = require('./interpolation/newtonBackward.service');
+const { solveCentralDifferenceInterpolation } = require('./interpolation/centralDifference.service');
 const { solveNaturalCubicSpline } = require('./interpolation/naturalCubicSpline.service');
 const { solveQuadraticInterpolation } = require('./interpolation/quadraticInterpolation.service');
 
@@ -49,6 +52,18 @@ function runNewtonDividedDifference(params, context = {}) {
   return runSolver('interpolation/newton-divided-difference', solveNewtonDividedDifference, params, context);
 }
 
+function runNewtonForwardInterpolation(params, context = {}) {
+  return runSolver('interpolation/newton-forward', solveNewtonForwardInterpolation, params, context);
+}
+
+function runNewtonBackwardInterpolation(params, context = {}) {
+  return runSolver('interpolation/newton-backward', solveNewtonBackwardInterpolation, params, context);
+}
+
+function runCentralDifferenceInterpolation(params, context = {}) {
+  return runSolver('interpolation/central-difference', solveCentralDifferenceInterpolation, params, context);
+}
+
 function runNaturalCubicSpline(params, context = {}) {
   return runSolver('interpolation/natural-cubic-spline', solveNaturalCubicSpline, params, context);
 }
@@ -86,6 +101,9 @@ module.exports = {
   runGaussSeidel,
   runLagrangeInterpolation,
   runNewtonDividedDifference,
+  runNewtonForwardInterpolation,
+  runNewtonBackwardInterpolation,
+  runCentralDifferenceInterpolation,
   runNaturalCubicSpline,
   runQuadraticInterpolation,
 };

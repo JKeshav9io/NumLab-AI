@@ -30,6 +30,50 @@ describe('Interpolation API', () => {
       2.4375,
     ],
     [
+      '/api/v1/solve/interpolation/newton-forward',
+      {
+        points: [
+          { x: 0, y: 1 },
+          { x: 1, y: 2 },
+          { x: 2, y: 5 },
+          { x: 3, y: 10 },
+        ],
+        targetX: 0.5,
+      },
+      'Newton Forward Interpolation',
+      1.25,
+    ],
+    [
+      '/api/v1/solve/interpolation/newton-backward',
+      {
+        points: [
+          { x: 0, y: 1 },
+          { x: 1, y: 2 },
+          { x: 2, y: 5 },
+          { x: 3, y: 10 },
+        ],
+        targetX: 2.5,
+      },
+      'Newton Backward Interpolation',
+      7.25,
+    ],
+    [
+      '/api/v1/solve/interpolation/central-difference',
+      {
+        points: [
+          { x: 0, y: 1 },
+          { x: 1, y: 2 },
+          { x: 2, y: 5 },
+          { x: 3, y: 10 },
+          { x: 4, y: 17 },
+        ],
+        targetX: 2.25,
+        variant: 'gauss-forward',
+      },
+      'Central Difference Interpolation',
+      6.0625,
+    ],
+    [
       '/api/v1/solve/interpolation/natural-cubic-spline',
       {
         points: [
@@ -128,6 +172,31 @@ describe('Interpolation API', () => {
       },
     ],
     [
+      'unequally spaced finite-difference points',
+      '/api/v1/solve/interpolation/newton-forward',
+      {
+        points: [
+          { x: 0, y: 1 },
+          { x: 1, y: 2 },
+          { x: 3, y: 10 },
+        ],
+        targetX: 0.5,
+      },
+    ],
+    [
+      'invalid central difference variant',
+      '/api/v1/solve/interpolation/central-difference',
+      {
+        points: [
+          { x: 0, y: 1 },
+          { x: 1, y: 2 },
+          { x: 2, y: 5 },
+        ],
+        targetX: 1,
+        variant: 'bad-variant',
+      },
+    ],
+    [
       'missing targetX',
       '/api/v1/solve/interpolation/lagrange',
       {
@@ -162,6 +231,35 @@ describe('Interpolation API', () => {
       expect(response.status).toBe(400);
       expect(body.success).toBe(false);
       expect(body.error.code).toBe('VALIDATION_ERROR');
+    } finally {
+      await closeServer(server);
+    }
+  });
+
+  test('POST central difference rejects unsuitable Bessel targetX', async () => {
+    const { server, baseUrl } = await startApp();
+
+    try {
+      const response = await fetch(`${baseUrl}/api/v1/solve/interpolation/central-difference`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          points: [
+            { x: 0, y: 1 },
+            { x: 1, y: 2 },
+            { x: 2, y: 5 },
+            { x: 3, y: 10 },
+            { x: 4, y: 17 },
+          ],
+          targetX: 1,
+          variant: 'bessel',
+        }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(400);
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('SOLVER_PRECONDITION_FAILED');
     } finally {
       await closeServer(server);
     }

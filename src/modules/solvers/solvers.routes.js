@@ -15,6 +15,9 @@ router.post('/linear/jacobi', asyncHandler(solversController.solveJacobi));
 router.post('/linear/gauss-seidel', asyncHandler(solversController.solveGaussSeidel));
 router.post('/interpolation/lagrange', asyncHandler(solversController.solveLagrangeInterpolation));
 router.post('/interpolation/newton-divided-difference', asyncHandler(solversController.solveNewtonDividedDifference));
+router.post('/interpolation/newton-forward', asyncHandler(solversController.solveNewtonForwardInterpolation));
+router.post('/interpolation/newton-backward', asyncHandler(solversController.solveNewtonBackwardInterpolation));
+router.post('/interpolation/central-difference', asyncHandler(solversController.solveCentralDifferenceInterpolation));
 router.post('/interpolation/natural-cubic-spline', asyncHandler(solversController.solveNaturalCubicSpline));
 router.post('/interpolation/quadratic', asyncHandler(solversController.solveQuadraticInterpolation));
 

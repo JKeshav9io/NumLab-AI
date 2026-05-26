@@ -11,6 +11,9 @@ const {
   validateGaussSeidel,
   validateLagrangeInterpolation,
   validateNewtonDividedDifference,
+  validateNewtonForwardInterpolation,
+  validateNewtonBackwardInterpolation,
+  validateCentralDifferenceInterpolation,
   validateNaturalCubicSpline,
   validateQuadraticInterpolation,
 } = require('./solvers.validator');
@@ -79,6 +82,27 @@ function solveNewtonDividedDifference(req, res) {
   return sendSuccess(res, result, req.id);
 }
 
+function solveNewtonForwardInterpolation(req, res) {
+  const params = validateNewtonForwardInterpolation(req.body);
+  const result = solversService.runNewtonForwardInterpolation(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveNewtonBackwardInterpolation(req, res) {
+  const params = validateNewtonBackwardInterpolation(req.body);
+  const result = solversService.runNewtonBackwardInterpolation(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveCentralDifferenceInterpolation(req, res) {
+  const params = validateCentralDifferenceInterpolation(req.body);
+  const result = solversService.runCentralDifferenceInterpolation(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
 function solveNaturalCubicSpline(req, res) {
   const params = validateNaturalCubicSpline(req.body);
   const result = solversService.runNaturalCubicSpline(params, { requestId: req.id });
@@ -103,6 +127,9 @@ module.exports = {
   solveGaussSeidel,
   solveLagrangeInterpolation,
   solveNewtonDividedDifference,
+  solveNewtonForwardInterpolation,
+  solveNewtonBackwardInterpolation,
+  solveCentralDifferenceInterpolation,
   solveNaturalCubicSpline,
   solveQuadraticInterpolation,
 };

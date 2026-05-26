@@ -20,6 +20,9 @@ The project is focused on making numerical methods easier to inspect, visualize,
 - Interpolation solvers:
   - Lagrange Interpolation
   - Newton Divided Difference
+  - Newton Forward Interpolation
+  - Newton Backward Interpolation
+  - Central Difference Interpolation
   - Natural Cubic Spline
   - Quadratic Interpolation
 - Joi request validation.
@@ -153,6 +156,9 @@ POST /api/v1/solve/linear/gauss-seidel
 
 POST /api/v1/solve/interpolation/lagrange
 POST /api/v1/solve/interpolation/newton-divided-difference
+POST /api/v1/solve/interpolation/newton-forward
+POST /api/v1/solve/interpolation/newton-backward
+POST /api/v1/solve/interpolation/central-difference
 POST /api/v1/solve/interpolation/natural-cubic-spline
 POST /api/v1/solve/interpolation/quadratic
 ```
@@ -214,6 +220,56 @@ POST /api/v1/solve/interpolation/quadratic
     { "x": 2, "y": 2 }
   ],
   "targetX": 1.5,
+  "includeExplanation": true,
+  "includeGraphData": true
+}
+```
+
+### Newton Forward Interpolation
+
+```json
+{
+  "points": [
+    { "x": 0, "y": 1 },
+    { "x": 1, "y": 2 },
+    { "x": 2, "y": 5 },
+    { "x": 3, "y": 10 }
+  ],
+  "targetX": 0.5,
+  "includeExplanation": true,
+  "includeGraphData": true
+}
+```
+
+### Newton Backward Interpolation
+
+```json
+{
+  "points": [
+    { "x": 0, "y": 1 },
+    { "x": 1, "y": 2 },
+    { "x": 2, "y": 5 },
+    { "x": 3, "y": 10 }
+  ],
+  "targetX": 2.5,
+  "includeExplanation": true,
+  "includeGraphData": true
+}
+```
+
+### Central Difference Interpolation
+
+```json
+{
+  "points": [
+    { "x": 0, "y": 1 },
+    { "x": 1, "y": 2 },
+    { "x": 2, "y": 5 },
+    { "x": 3, "y": 10 },
+    { "x": 4, "y": 17 }
+  ],
+  "targetX": 2.25,
+  "variant": "gauss-forward",
   "includeExplanation": true,
   "includeGraphData": true
 }

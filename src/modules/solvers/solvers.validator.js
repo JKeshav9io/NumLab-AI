@@ -2,8 +2,12 @@
 
 const Joi = require('joi');
 const { AppError, errorCodes } = require('../../common/errors');
-
-const INTERPOLATION_NEAR_ZERO_THRESHOLD = 1e-12;
+const {
+  CENTRAL_DIFFERENCE_VARIANTS,
+  EQUAL_SPACING_TOLERANCE,
+  INTERPOLATION_NEAR_ZERO_THRESHOLD,
+  MAX_INTERPOLATION_POINTS,
+} = require('./interpolation/interpolation.constants');
 
 const bisectionSchema = Joi.object({
   equation: Joi.string().trim().max(500).required(),
@@ -84,10 +88,14 @@ const interpolationPointSchema = Joi.object({
 }).required();
 
 const interpolationSchema = Joi.object({
-  points: Joi.array().items(interpolationPointSchema).min(2).max(100).required(),
+  points: Joi.array().items(interpolationPointSchema).min(2).max(MAX_INTERPOLATION_POINTS).required(),
   targetX: Joi.number().required(),
   includeExplanation: Joi.boolean().default(true),
   includeGraphData: Joi.boolean().default(true),
+});
+
+const centralDifferenceSchema = interpolationSchema.keys({
+  variant: Joi.string().valid(...CENTRAL_DIFFERENCE_VARIANTS).required(),
 });
 
 function validateBisection(body) {
@@ -129,6 +137,31 @@ function validateNewtonDividedDifference(body) {
   return validateInterpolation(interpolationSchema, body, {
     minPoints: 2,
     methodName: 'Newton divided difference',
+  });
+}
+
+function validateNewtonForwardInterpolation(body) {
+  return validateInterpolation(interpolationSchema, body, {
+    minPoints: 2,
+    methodName: 'Newton forward interpolation',
+    requireEqualSpacing: true,
+  });
+}
+
+function validateNewtonBackwardInterpolation(body) {
+  return validateInterpolation(interpolationSchema, body, {
+    minPoints: 2,
+    methodName: 'Newton backward interpolation',
+    requireEqualSpacing: true,
+  });
+}
+
+function validateCentralDifferenceInterpolation(body) {
+  return validateInterpolation(centralDifferenceSchema, body, {
+    minPoints: 3,
+    methodName: 'Central difference interpolation',
+    requireEqualSpacing: true,
+    validateBesselShape: true,
   });
 }
 
@@ -271,6 +304,30 @@ function validateInterpolation(schema, body, options) {
     }
   }
 
+  if (options.requireEqualSpacing) {
+    const sortedPoints = value.points.slice().sort((a, b) => a.x - b.x);
+    const expectedSpacing = sortedPoints[1].x - sortedPoints[0].x;
+
+    for (let index = 1; index < sortedPoints.length - 1; index++) {
+      const actualSpacing = sortedPoints[index + 1].x - sortedPoints[index].x;
+
+      if (Math.abs(actualSpacing - expectedSpacing) > EQUAL_SPACING_TOLERANCE) {
+        errors.push({
+          field: 'points',
+          message: 'x values must be equally spaced for finite-difference interpolation',
+        });
+        break;
+      }
+    }
+  }
+
+  if (options.validateBesselShape && value.variant === 'bessel' && value.points.length < 4) {
+    errors.push({
+      field: 'points',
+      message: 'Bessel interpolation requires at least 4 equally spaced points',
+    });
+  }
+
   if (errors.length > 0) {
     throw new AppError(
       'Validation failed',
@@ -293,6 +350,9 @@ module.exports = {
   validateGaussSeidel,
   validateLagrangeInterpolation,
   validateNewtonDividedDifference,
+  validateNewtonForwardInterpolation,
+  validateNewtonBackwardInterpolation,
+  validateCentralDifferenceInterpolation,
   validateNaturalCubicSpline,
   validateQuadraticInterpolation,
 };

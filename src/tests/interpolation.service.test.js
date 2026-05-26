@@ -2,6 +2,9 @@
 
 const { solveLagrangeInterpolation } = require('../modules/solvers/interpolation/lagrange.service');
 const { solveNewtonDividedDifference } = require('../modules/solvers/interpolation/newtonDividedDifference.service');
+const { solveNewtonForwardInterpolation } = require('../modules/solvers/interpolation/newtonForward.service');
+const { solveNewtonBackwardInterpolation } = require('../modules/solvers/interpolation/newtonBackward.service');
+const { solveCentralDifferenceInterpolation } = require('../modules/solvers/interpolation/centralDifference.service');
 const { solveNaturalCubicSpline } = require('../modules/solvers/interpolation/naturalCubicSpline.service');
 const { solveQuadraticInterpolation } = require('../modules/solvers/interpolation/quadraticInterpolation.service');
 
@@ -67,6 +70,95 @@ describe('Interpolation services', () => {
     expect(result.finalAnswer.intervalIndex).toBe(1);
     expect(result.iterations.some((row) => row.phase === 'interval-coefficients')).toBe(true);
     expect(result.warnings).toContain('Natural cubic spline uses zero second derivative at both endpoints');
+  });
+
+  test('Newton forward interpolation returns a finite difference table', () => {
+    const result = solveNewtonForwardInterpolation({
+      points: [
+        { x: 0, y: 1 },
+        { x: 1, y: 2 },
+        { x: 2, y: 5 },
+        { x: 3, y: 10 },
+      ],
+      targetX: 0.5,
+      includeExplanation: true,
+      includeGraphData: true,
+    });
+
+    expect(result.method).toBe('Newton Forward Interpolation');
+    expect(result.status).toBe('converged');
+    expect(result.finalAnswer.predictedY).toBeCloseTo(1.25, 6);
+    expect(result.differenceTable).toHaveLength(4);
+    expect(result.differenceTable[0].differences.delta1).toBe(1);
+    expect(result.graphData.predictedPoint).toEqual({ x: 0.5, y: 1.25 });
+  });
+
+  test('Newton backward interpolation predicts near the end of equally spaced data', () => {
+    const result = solveNewtonBackwardInterpolation({
+      points: [
+        { x: 0, y: 1 },
+        { x: 1, y: 2 },
+        { x: 2, y: 5 },
+        { x: 3, y: 10 },
+      ],
+      targetX: 2.5,
+      includeExplanation: true,
+      includeGraphData: false,
+    });
+
+    expect(result.method).toBe('Newton Backward Interpolation');
+    expect(result.status).toBe('converged');
+    expect(result.finalAnswer.predictedY).toBeCloseTo(7.25, 6);
+    expect(result.differenceTable).toHaveLength(4);
+    expect(result.iterations.some((row) => row.phase === 'term')).toBe(true);
+    expect(result.graphData.predictedPoint).toBeNull();
+  });
+
+  test('Central difference supports Gauss Forward, Gauss Backward, Stirling, and Bessel variants', () => {
+    const points = [
+      { x: 0, y: 1 },
+      { x: 1, y: 2 },
+      { x: 2, y: 5 },
+      { x: 3, y: 10 },
+      { x: 4, y: 17 },
+      { x: 5, y: 26 },
+    ];
+
+    const gaussForward = solveCentralDifferenceInterpolation({
+      points,
+      targetX: 2.25,
+      variant: 'gauss-forward',
+      includeExplanation: true,
+      includeGraphData: true,
+    });
+    const gaussBackward = solveCentralDifferenceInterpolation({
+      points,
+      targetX: 1.75,
+      variant: 'gauss-backward',
+      includeExplanation: true,
+      includeGraphData: true,
+    });
+    const stirling = solveCentralDifferenceInterpolation({
+      points,
+      targetX: 2,
+      variant: 'stirling',
+      includeExplanation: true,
+      includeGraphData: true,
+    });
+    const bessel = solveCentralDifferenceInterpolation({
+      points,
+      targetX: 2.5,
+      variant: 'bessel',
+      includeExplanation: true,
+      includeGraphData: true,
+    });
+
+    expect(gaussForward.finalAnswer.predictedY).toBeCloseTo(6.0625, 6);
+    expect(gaussBackward.finalAnswer.predictedY).toBeCloseTo(4.0625, 6);
+    expect(stirling.finalAnswer.predictedY).toBeCloseTo(5, 6);
+    expect(bessel.finalAnswer.predictedY).toBeCloseTo(7.25, 6);
+    expect(bessel.finalAnswer.variant).toBe('bessel');
+    expect(bessel.differenceTable[0]).toHaveProperty('differences');
   });
 
   test('Quadratic interpolation selects the 3 nearest points and fits y = ax^2 + bx + c', () => {
