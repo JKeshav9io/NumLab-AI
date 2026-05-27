@@ -15,6 +15,10 @@ const { solveNewtonBackwardInterpolation } = require('./interpolation/newtonBack
 const { solveCentralDifferenceInterpolation } = require('./interpolation/centralDifference.service');
 const { solveNaturalCubicSpline } = require('./interpolation/naturalCubicSpline.service');
 const { solveQuadraticInterpolation } = require('./interpolation/quadraticInterpolation.service');
+const { solveEuler } = require('./ode/euler.service');
+const { solveHeun } = require('./ode/heun.service');
+const { solveRK4 } = require('./ode/rk4.service');
+const { solveMilne } = require('./ode/milne.service');
 
 function runBisection(params, context = {}) {
   return runRootSolver('root/bisection', solveBisection, params, context);
@@ -72,6 +76,22 @@ function runQuadraticInterpolation(params, context = {}) {
   return runSolver('interpolation/quadratic', solveQuadraticInterpolation, params, context);
 }
 
+function runEulerODE(params, context = {}) {
+  return runSolver('ode/euler', solveEuler, params, context);
+}
+
+function runHeunODE(params, context = {}) {
+  return runSolver('ode/heun', solveHeun, params, context);
+}
+
+function runRK4ODE(params, context = {}) {
+  return runSolver('ode/rk4', solveRK4, params, context);
+}
+
+function runMilneODE(params, context = {}) {
+  return runSolver('ode/milne', solveMilne, params, context);
+}
+
 function runRootSolver(method, solver, params, context) {
   return runSolver(method, solver, params, context);
 }
@@ -106,4 +126,8 @@ module.exports = {
   runCentralDifferenceInterpolation,
   runNaturalCubicSpline,
   runQuadraticInterpolation,
+  runEulerODE,
+  runHeunODE,
+  runRK4ODE,
+  runMilneODE,
 };

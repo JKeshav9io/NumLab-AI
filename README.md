@@ -25,6 +25,11 @@ The project is focused on making numerical methods easier to inspect, visualize,
   - Central Difference Interpolation
   - Natural Cubic Spline
   - Quadratic Interpolation
+- ODE solvers:
+  - Euler Method
+  - Heun / Improved Euler Method
+  - RK4 Method
+  - Milne Predictor-Corrector Method
 - Joi request validation.
 - Structured success and error responses.
 - Request logging with pino.
@@ -161,6 +166,11 @@ POST /api/v1/solve/interpolation/newton-backward
 POST /api/v1/solve/interpolation/central-difference
 POST /api/v1/solve/interpolation/natural-cubic-spline
 POST /api/v1/solve/interpolation/quadratic
+
+POST /api/v1/solve/ode/euler
+POST /api/v1/solve/ode/heun
+POST /api/v1/solve/ode/rk4
+POST /api/v1/solve/ode/milne
 ```
 
 ## Example Requests
@@ -275,6 +285,34 @@ POST /api/v1/solve/interpolation/quadratic
 }
 ```
 
+### ODE Solvers
+
+```json
+{
+  "equation": "x + y",
+  "x0": 0,
+  "y0": 1,
+  "h": 0.1,
+  "xn": 1,
+  "includeExplanation": true,
+  "includeGraphData": true
+}
+```
+
+You can use `steps` instead of `xn`:
+
+```json
+{
+  "equation": "x + y",
+  "x0": 0,
+  "y0": 1,
+  "h": 0.1,
+  "steps": 10,
+  "includeExplanation": true,
+  "includeGraphData": true
+}
+```
+
 ## Response Format
 
 Success responses use this envelope:
@@ -315,12 +353,11 @@ Error responses use this envelope:
 
 ## Current Status
 
-- Implemented solver APIs for root finding, linear algebra, and interpolation.
+- Implemented solver APIs for root finding, linear algebra, interpolation, and ODE initial value problems.
 - Other modules are planned but not implemented yet.
 
 ## Planned Improvements
 
-- ODE solvers.
 - Numerical integration solvers.
 - AI explanations based on computed results.
 - PDF reports.

@@ -16,6 +16,10 @@ const {
   validateCentralDifferenceInterpolation,
   validateNaturalCubicSpline,
   validateQuadraticInterpolation,
+  validateEulerODE,
+  validateHeunODE,
+  validateRK4ODE,
+  validateMilneODE,
 } = require('./solvers.validator');
 const { sendSuccess } = require('../../common/utils');
 
@@ -117,6 +121,34 @@ function solveQuadraticInterpolation(req, res) {
   return sendSuccess(res, result, req.id);
 }
 
+function solveEulerODE(req, res) {
+  const params = validateEulerODE(req.body);
+  const result = solversService.runEulerODE(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveHeunODE(req, res) {
+  const params = validateHeunODE(req.body);
+  const result = solversService.runHeunODE(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveRK4ODE(req, res) {
+  const params = validateRK4ODE(req.body);
+  const result = solversService.runRK4ODE(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveMilneODE(req, res) {
+  const params = validateMilneODE(req.body);
+  const result = solversService.runMilneODE(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
 module.exports = {
   solveBisection,
   solveNewtonRaphson,
@@ -132,4 +164,8 @@ module.exports = {
   solveCentralDifferenceInterpolation,
   solveNaturalCubicSpline,
   solveQuadraticInterpolation,
+  solveEulerODE,
+  solveHeunODE,
+  solveRK4ODE,
+  solveMilneODE,
 };

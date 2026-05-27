@@ -9,6 +9,8 @@ const {
   MAX_INTERPOLATION_POINTS,
 } = require('./interpolation/interpolation.constants');
 
+const ODE_STEP_MULTIPLE_TOLERANCE = 1e-10;
+
 const bisectionSchema = Joi.object({
   equation: Joi.string().trim().max(500).required(),
   lowerBound: Joi.number().required(),
@@ -98,6 +100,17 @@ const centralDifferenceSchema = interpolationSchema.keys({
   variant: Joi.string().valid(...CENTRAL_DIFFERENCE_VARIANTS).required(),
 });
 
+const odeSchema = Joi.object({
+  equation: Joi.string().trim().max(500).required(),
+  x0: Joi.number().required(),
+  y0: Joi.number().required(),
+  h: Joi.number().positive().required(),
+  xn: Joi.number().optional(),
+  steps: Joi.number().integer().min(1).max(10000).optional(),
+  includeExplanation: Joi.boolean().default(true),
+  includeGraphData: Joi.boolean().default(true),
+});
+
 function validateBisection(body) {
   return validateWithSchema(bisectionSchema, body);
 }
@@ -180,6 +193,31 @@ function validateQuadraticInterpolation(body) {
   });
 }
 
+function validateEulerODE(body) {
+  return validateODE(odeSchema, body, {
+    methodName: 'Euler Method',
+  });
+}
+
+function validateHeunODE(body) {
+  return validateODE(odeSchema, body, {
+    methodName: 'Heun Method',
+  });
+}
+
+function validateRK4ODE(body) {
+  return validateODE(odeSchema, body, {
+    methodName: 'RK4 Method',
+  });
+}
+
+function validateMilneODE(body) {
+  return validateODE(odeSchema, body, {
+    methodName: 'Milne Predictor-Corrector Method',
+    minSteps: 4,
+  });
+}
+
 function validateWithSchema(schema, body) {
   const { error, value } = schema.validate(body, {
     abortEarly: false,
@@ -197,6 +235,61 @@ function validateWithSchema(schema, body) {
           message: detail.message,
         })),
       }
+    );
+  }
+
+  return value;
+}
+
+function validateODE(schema, body, options) {
+  const value = validateWithSchema(schema, body);
+  const errors = [];
+  const hasXn = value.xn !== undefined;
+  const hasSteps = value.steps !== undefined;
+
+  if (!hasXn && !hasSteps) {
+    errors.push({
+      field: 'xn',
+      message: 'either xn or steps is required',
+    });
+  }
+
+  if (hasXn && hasSteps) {
+    errors.push({
+      field: 'body',
+      message: 'provide either xn or steps, not both',
+    });
+  }
+
+  if (hasXn && value.xn <= value.x0) {
+    errors.push({
+      field: 'xn',
+      message: 'xn must be greater than x0 for positive h',
+    });
+  }
+
+  if (hasXn && value.xn > value.x0 && !isWholeStepMultiple(value.x0, value.xn, value.h)) {
+    errors.push({
+      field: 'xn',
+      message: 'xn - x0 must be an exact positive multiple of h, or provide steps instead',
+    });
+  }
+
+  const resolvedSteps = hasSteps ? value.steps : Math.round((value.xn - value.x0) / value.h);
+
+  if (options.minSteps && resolvedSteps < options.minSteps) {
+    errors.push({
+      field: hasSteps ? 'steps' : 'xn',
+      message: `${options.methodName} requires at least ${options.minSteps} steps`,
+    });
+  }
+
+  if (errors.length > 0) {
+    throw new AppError(
+      'Validation failed',
+      400,
+      errorCodes.VALIDATION_ERROR,
+      { fields: errors }
     );
   }
 
@@ -340,6 +433,11 @@ function validateInterpolation(schema, body, options) {
   return value;
 }
 
+function isWholeStepMultiple(x0, xn, h) {
+  const rawSteps = (xn - x0) / h;
+  return rawSteps > 0 && Math.abs(rawSteps - Math.round(rawSteps)) <= ODE_STEP_MULTIPLE_TOLERANCE;
+}
+
 module.exports = {
   validateBisection,
   validateNewtonRaphson,
@@ -355,4 +453,8 @@ module.exports = {
   validateCentralDifferenceInterpolation,
   validateNaturalCubicSpline,
   validateQuadraticInterpolation,
+  validateEulerODE,
+  validateHeunODE,
+  validateRK4ODE,
+  validateMilneODE,
 };

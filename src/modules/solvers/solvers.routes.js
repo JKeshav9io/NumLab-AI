@@ -20,5 +20,9 @@ router.post('/interpolation/newton-backward', asyncHandler(solversController.sol
 router.post('/interpolation/central-difference', asyncHandler(solversController.solveCentralDifferenceInterpolation));
 router.post('/interpolation/natural-cubic-spline', asyncHandler(solversController.solveNaturalCubicSpline));
 router.post('/interpolation/quadratic', asyncHandler(solversController.solveQuadraticInterpolation));
+router.post('/ode/euler', asyncHandler(solversController.solveEulerODE));
+router.post('/ode/heun', asyncHandler(solversController.solveHeunODE));
+router.post('/ode/rk4', asyncHandler(solversController.solveRK4ODE));
+router.post('/ode/milne', asyncHandler(solversController.solveMilneODE));
 
 module.exports = router;
