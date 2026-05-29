@@ -43,8 +43,9 @@ The project is focused on making numerical methods easier to inspect, visualize,
   - Function-based Finite Difference
 - Joi request validation.
 - Structured success and error responses.
+- Stateless AI explanation endpoint for already-computed solver results.
 - Request logging with pino.
-- Rate limiting for solver routes.
+- Rate limiting for solver and AI explanation routes.
 - Safe math expression parsing with mathjs.
 - Jest test suite.
 
@@ -160,6 +161,14 @@ Environment variables are documented in `.env.example`. Create a local `.env` fi
 
 Do not commit real secrets or production credentials.
 
+AI explanation settings:
+
+- `AI_API_KEY`: provider API key.
+- `AI_MODEL`: OpenAI-compatible chat model name.
+- `AI_BASE_URL`: provider base URL, for example `https://api.openai.com/v1`.
+- `AI_MAX_TOKENS`: maximum provider response tokens for explanation text. Defaults to `700`.
+- `AI_TIMEOUT_MS`: AI provider request timeout in milliseconds. Defaults to `15000`.
+
 ## API Endpoints
 
 ```text
@@ -197,6 +206,8 @@ POST /api/v1/solve/differentiation/backward
 POST /api/v1/solve/differentiation/central
 POST /api/v1/solve/differentiation/lagrange
 POST /api/v1/solve/differentiation/function-finite-difference
+
+POST /api/v1/explain
 ```
 
 ## Example Requests
@@ -401,6 +412,29 @@ Gauss-Legendre Quadrature uses `points` from `2` through `5`:
 }
 ```
 
+### AI Explanation
+
+The endpoint is stateless and explains only an already-computed solver result. It is protected by the `explainLimiter`, uses `AI_MAX_TOKENS` for the provider response cap, and times out provider calls after `AI_TIMEOUT_MS`.
+
+```json
+{
+  "solverResult": {
+    "method": "Bisection Method",
+    "status": "converged",
+    "input": {},
+    "iterations": [],
+    "finalAnswer": {
+      "root": 2,
+      "converged": true
+    },
+    "warnings": [],
+    "executionTimeMs": 2
+  },
+  "focus": "steps",
+  "includeGraphSummary": true
+}
+```
+
 ## Response Format
 
 Success responses use this envelope:
@@ -442,11 +476,11 @@ Error responses use this envelope:
 ## Current Status
 
 - Implemented solver APIs for root finding, linear algebra, interpolation, ODE initial value problems, numerical integration, and numerical differentiation.
+- Implemented stateless AI explanations for already-computed solver results.
 - Other modules are planned but not implemented yet.
 
 ## Planned Improvements
 
-- AI explanations based on computed results.
 - PDF reports.
 - Saved history.
 - Authentication.
@@ -456,4 +490,4 @@ Error responses use this envelope:
 - Solvers are deterministic and run in backend code.
 - mathjs is used for expression parsing.
 - `eval()` and `new Function()` should not be used for math evaluation.
-- AI, when added later, should only explain computed results and must not calculate numerical answers.
+- AI explanations only explain computed results and must not calculate numerical answers.
