@@ -6,7 +6,8 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const errorHandler = require('./common/middleware/errorHandler');
 const requestLogger = require('./common/middleware/requestLogger');
-const { solveLimiter } = require('./common/middleware/rateLimiter');
+const { explainLimiter, solveLimiter } = require('./common/middleware/rateLimiter');
+const explanationsRoutes = require('./modules/explanations/explanations.routes');
 const solversRoutes = require('./modules/solvers/solvers.routes');
 
 function createApp() {
@@ -26,6 +27,7 @@ function createApp() {
   });
 
   app.use('/api/v1/solve', solveLimiter, solversRoutes);
+  app.use('/api/v1/explain', explainLimiter, explanationsRoutes);
 
   app.use(errorHandler);
 
