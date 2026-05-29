@@ -19,6 +19,10 @@ const { solveEuler } = require('./ode/euler.service');
 const { solveHeun } = require('./ode/heun.service');
 const { solveRK4 } = require('./ode/rk4.service');
 const { solveMilne } = require('./ode/milne.service');
+const { solveTrapezoidal } = require('./integration/trapezoidal.service');
+const { solveSimpsonOneThird } = require('./integration/simpsonOneThird.service');
+const { solveSimpsonThreeEighth } = require('./integration/simpsonThreeEighth.service');
+const { solveGaussLegendre } = require('./integration/gaussLegendre.service');
 
 function runBisection(params, context = {}) {
   return runRootSolver('root/bisection', solveBisection, params, context);
@@ -92,6 +96,22 @@ function runMilneODE(params, context = {}) {
   return runSolver('ode/milne', solveMilne, params, context);
 }
 
+function runTrapezoidalIntegration(params, context = {}) {
+  return runSolver('integration/trapezoidal', solveTrapezoidal, params, context);
+}
+
+function runSimpsonOneThirdIntegration(params, context = {}) {
+  return runSolver('integration/simpson-13', solveSimpsonOneThird, params, context);
+}
+
+function runSimpsonThreeEighthIntegration(params, context = {}) {
+  return runSolver('integration/simpson-38', solveSimpsonThreeEighth, params, context);
+}
+
+function runGaussLegendreIntegration(params, context = {}) {
+  return runSolver('integration/gauss-legendre', solveGaussLegendre, params, context);
+}
+
 function runRootSolver(method, solver, params, context) {
   return runSolver(method, solver, params, context);
 }
@@ -130,4 +150,8 @@ module.exports = {
   runHeunODE,
   runRK4ODE,
   runMilneODE,
+  runTrapezoidalIntegration,
+  runSimpsonOneThirdIntegration,
+  runSimpsonThreeEighthIntegration,
+  runGaussLegendreIntegration,
 };

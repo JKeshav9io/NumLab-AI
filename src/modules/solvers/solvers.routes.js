@@ -24,5 +24,9 @@ router.post('/ode/euler', asyncHandler(solversController.solveEulerODE));
 router.post('/ode/heun', asyncHandler(solversController.solveHeunODE));
 router.post('/ode/rk4', asyncHandler(solversController.solveRK4ODE));
 router.post('/ode/milne', asyncHandler(solversController.solveMilneODE));
+router.post('/integration/trapezoidal', asyncHandler(solversController.solveTrapezoidalIntegration));
+router.post('/integration/simpson-13', asyncHandler(solversController.solveSimpsonOneThirdIntegration));
+router.post('/integration/simpson-38', asyncHandler(solversController.solveSimpsonThreeEighthIntegration));
+router.post('/integration/gauss-legendre', asyncHandler(solversController.solveGaussLegendreIntegration));
 
 module.exports = router;

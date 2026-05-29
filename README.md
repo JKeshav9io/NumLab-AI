@@ -30,6 +30,11 @@ The project is focused on making numerical methods easier to inspect, visualize,
   - Heun / Improved Euler Method
   - RK4 Method
   - Milne Predictor-Corrector Method
+- Numerical integration solvers:
+  - Trapezoidal Rule
+  - Simpson's 1/3 Rule
+  - Simpson's 3/8 Rule
+  - Gauss-Legendre Quadrature
 - Joi request validation.
 - Structured success and error responses.
 - Request logging with pino.
@@ -171,6 +176,11 @@ POST /api/v1/solve/ode/euler
 POST /api/v1/solve/ode/heun
 POST /api/v1/solve/ode/rk4
 POST /api/v1/solve/ode/milne
+
+POST /api/v1/solve/integration/trapezoidal
+POST /api/v1/solve/integration/simpson-13
+POST /api/v1/solve/integration/simpson-38
+POST /api/v1/solve/integration/gauss-legendre
 ```
 
 ## Example Requests
@@ -299,6 +309,36 @@ POST /api/v1/solve/ode/milne
 }
 ```
 
+### Numerical Integration
+
+Composite Trapezoidal, Simpson's 1/3, and Simpson's 3/8 rules use `subintervals`:
+
+```json
+{
+  "equation": "x^2",
+  "lowerBound": 0,
+  "upperBound": 1,
+  "subintervals": 6,
+  "exactValue": 0.3333333333,
+  "includeExplanation": true,
+  "includeGraphData": true
+}
+```
+
+Gauss-Legendre Quadrature uses `points` from `2` through `5`:
+
+```json
+{
+  "equation": "x^2",
+  "lowerBound": 0,
+  "upperBound": 1,
+  "points": 3,
+  "exactValue": 0.3333333333,
+  "includeExplanation": true,
+  "includeGraphData": true
+}
+```
+
 You can use `steps` instead of `xn`:
 
 ```json
@@ -353,12 +393,11 @@ Error responses use this envelope:
 
 ## Current Status
 
-- Implemented solver APIs for root finding, linear algebra, interpolation, and ODE initial value problems.
+- Implemented solver APIs for root finding, linear algebra, interpolation, ODE initial value problems, and numerical integration.
 - Other modules are planned but not implemented yet.
 
 ## Planned Improvements
 
-- Numerical integration solvers.
 - AI explanations based on computed results.
 - PDF reports.
 - Saved history.

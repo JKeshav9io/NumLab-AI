@@ -111,6 +111,55 @@ const odeSchema = Joi.object({
   includeGraphData: Joi.boolean().default(true),
 });
 
+const integrationBaseSchema = Joi.object({
+  equation: Joi.string().trim().max(500).required(),
+  lowerBound: Joi.number().required(),
+  upperBound: Joi.number().required(),
+  exactValue: Joi.number().optional(),
+  includeExplanation: Joi.boolean().default(true),
+  includeGraphData: Joi.boolean().default(true),
+}).custom((value, helpers) => {
+  if (value.lowerBound >= value.upperBound) {
+    return helpers.error('bounds.ordered');
+  }
+
+  return value;
+}).messages({
+  'bounds.ordered': 'lowerBound must be less than upperBound',
+});
+
+const trapezoidalSchema = integrationBaseSchema.keys({
+  subintervals: Joi.number().integer().min(1).max(10000).required(),
+});
+
+const simpsonOneThirdSchema = integrationBaseSchema.keys({
+  subintervals: Joi.number().integer().min(2).max(10000).required(),
+}).custom((value, helpers) => {
+  if (value.subintervals % 2 !== 0) {
+    return helpers.error('subintervals.even');
+  }
+
+  return value;
+}).messages({
+  'subintervals.even': "subintervals must be even for Simpson's 1/3 Rule",
+});
+
+const simpsonThreeEighthSchema = integrationBaseSchema.keys({
+  subintervals: Joi.number().integer().min(3).max(9999).required(),
+}).custom((value, helpers) => {
+  if (value.subintervals % 3 !== 0) {
+    return helpers.error('subintervals.divisibleByThree');
+  }
+
+  return value;
+}).messages({
+  'subintervals.divisibleByThree': "subintervals must be divisible by 3 for Simpson's 3/8 Rule",
+});
+
+const gaussLegendreSchema = integrationBaseSchema.keys({
+  points: Joi.number().integer().valid(2, 3, 4, 5).required(),
+});
+
 function validateBisection(body) {
   return validateWithSchema(bisectionSchema, body);
 }
@@ -216,6 +265,22 @@ function validateMilneODE(body) {
     methodName: 'Milne Predictor-Corrector Method',
     minSteps: 4,
   });
+}
+
+function validateTrapezoidalIntegration(body) {
+  return validateWithSchema(trapezoidalSchema, body);
+}
+
+function validateSimpsonOneThirdIntegration(body) {
+  return validateWithSchema(simpsonOneThirdSchema, body);
+}
+
+function validateSimpsonThreeEighthIntegration(body) {
+  return validateWithSchema(simpsonThreeEighthSchema, body);
+}
+
+function validateGaussLegendreIntegration(body) {
+  return validateWithSchema(gaussLegendreSchema, body);
 }
 
 function validateWithSchema(schema, body) {
@@ -457,4 +522,8 @@ module.exports = {
   validateHeunODE,
   validateRK4ODE,
   validateMilneODE,
+  validateTrapezoidalIntegration,
+  validateSimpsonOneThirdIntegration,
+  validateSimpsonThreeEighthIntegration,
+  validateGaussLegendreIntegration,
 };

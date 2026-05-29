@@ -20,6 +20,10 @@ const {
   validateHeunODE,
   validateRK4ODE,
   validateMilneODE,
+  validateTrapezoidalIntegration,
+  validateSimpsonOneThirdIntegration,
+  validateSimpsonThreeEighthIntegration,
+  validateGaussLegendreIntegration,
 } = require('./solvers.validator');
 const { sendSuccess } = require('../../common/utils');
 
@@ -149,6 +153,34 @@ function solveMilneODE(req, res) {
   return sendSuccess(res, result, req.id);
 }
 
+function solveTrapezoidalIntegration(req, res) {
+  const params = validateTrapezoidalIntegration(req.body);
+  const result = solversService.runTrapezoidalIntegration(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveSimpsonOneThirdIntegration(req, res) {
+  const params = validateSimpsonOneThirdIntegration(req.body);
+  const result = solversService.runSimpsonOneThirdIntegration(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveSimpsonThreeEighthIntegration(req, res) {
+  const params = validateSimpsonThreeEighthIntegration(req.body);
+  const result = solversService.runSimpsonThreeEighthIntegration(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveGaussLegendreIntegration(req, res) {
+  const params = validateGaussLegendreIntegration(req.body);
+  const result = solversService.runGaussLegendreIntegration(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
 module.exports = {
   solveBisection,
   solveNewtonRaphson,
@@ -168,4 +200,8 @@ module.exports = {
   solveHeunODE,
   solveRK4ODE,
   solveMilneODE,
+  solveTrapezoidalIntegration,
+  solveSimpsonOneThirdIntegration,
+  solveSimpsonThreeEighthIntegration,
+  solveGaussLegendreIntegration,
 };
