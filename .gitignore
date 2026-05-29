@@ -35,3 +35,20 @@ Thumbs.db
 reports/
 tmp/
 temp/
+
+# Local AI assistant / Graphify / Codex files
+.agents/
+.codex/
+AGENTS.md
+graphify-out/
+
+# AI / planning / local instruction docs
+AGENTS.md
+AI_INSTRUCTIONS.md
+PROJECT_BLUEPRINT.md
+ARCHITECTURE.md
+API_SPEC.md
+
+# Local AI/tooling configs
+.agents/
+.codex/
