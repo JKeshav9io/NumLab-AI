@@ -110,6 +110,9 @@ Key files and folders:
 - `src/modules/solvers/rootFinding`: Root-finding solver implementations.
 - `src/modules/solvers/linearAlgebra`: Linear algebra solver implementations.
 - `src/modules/solvers/interpolation`: Interpolation solver implementations.
+- `src/modules/solvers/ode`: ODE solver implementations.
+- `src/modules/solvers/integration`: Numerical integration solver implementations.
+- `src/modules/solvers/differentiation`: Numerical differentiation solver implementations.
 - `src/tests`: Jest tests for configuration, API routes, and solver services.
 
 ## Getting Started
@@ -322,6 +325,20 @@ POST /api/v1/solve/differentiation/function-finite-difference
 }
 ```
 
+You can use `steps` instead of `xn`:
+
+```json
+{
+  "equation": "x + y",
+  "x0": 0,
+  "y0": 1,
+  "h": 0.1,
+  "steps": 10,
+  "includeExplanation": true,
+  "includeGraphData": true
+}
+```
+
 ### Numerical Differentiation
 
 Tabular finite-difference and Lagrange differentiation endpoints use points:
@@ -379,20 +396,6 @@ Gauss-Legendre Quadrature uses `points` from `2` through `5`:
   "upperBound": 1,
   "points": 3,
   "exactValue": 0.3333333333,
-  "includeExplanation": true,
-  "includeGraphData": true
-}
-```
-
-You can use `steps` instead of `xn`:
-
-```json
-{
-  "equation": "x + y",
-  "x0": 0,
-  "y0": 1,
-  "h": 0.1,
-  "steps": 10,
   "includeExplanation": true,
   "includeGraphData": true
 }
