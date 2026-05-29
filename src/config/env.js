@@ -32,6 +32,17 @@ function parseIntegerEnv(key, fallback) {
   return parsed;
 }
 
+function parsePositiveIntegerEnv(key, fallback) {
+  const parsed = parseIntegerEnv(key, fallback);
+
+  if (parsed <= 0) {
+    console.error(`Invalid positive integer environment variable: ${key}`);
+    process.exit(1);
+  }
+
+  return parsed;
+}
+
 module.exports = {
   NODE_ENV: process.env.NODE_ENV,
   PORT: parseIntegerEnv('PORT'),
@@ -48,6 +59,8 @@ module.exports = {
   AI_API_KEY: process.env.AI_API_KEY,
   AI_MODEL: process.env.AI_MODEL || 'gpt-4o-mini',
   AI_BASE_URL: process.env.AI_BASE_URL || 'https://api.openai.com/v1',
+  AI_MAX_TOKENS: parsePositiveIntegerEnv('AI_MAX_TOKENS', '700'),
+  AI_TIMEOUT_MS: parsePositiveIntegerEnv('AI_TIMEOUT_MS', '15000'),
 
   STORAGE_BUCKET: process.env.STORAGE_BUCKET || 'numlab-reports',
   STORAGE_REGION: process.env.STORAGE_REGION || 'us-east-1',
