@@ -23,6 +23,11 @@ const { solveTrapezoidal } = require('./integration/trapezoidal.service');
 const { solveSimpsonOneThird } = require('./integration/simpsonOneThird.service');
 const { solveSimpsonThreeEighth } = require('./integration/simpsonThreeEighth.service');
 const { solveGaussLegendre } = require('./integration/gaussLegendre.service');
+const { solveForwardDifference } = require('./differentiation/forwardDifference.service');
+const { solveBackwardDifference } = require('./differentiation/backwardDifference.service');
+const { solveCentralDifference } = require('./differentiation/centralDifference.service');
+const { solveLagrangeDifferentiation } = require('./differentiation/lagrangeDifferentiation.service');
+const { solveFunctionFiniteDifference } = require('./differentiation/functionFiniteDifference.service');
 
 function runBisection(params, context = {}) {
   return runRootSolver('root/bisection', solveBisection, params, context);
@@ -112,6 +117,26 @@ function runGaussLegendreIntegration(params, context = {}) {
   return runSolver('integration/gauss-legendre', solveGaussLegendre, params, context);
 }
 
+function runForwardDifference(params, context = {}) {
+  return runSolver('differentiation/forward', solveForwardDifference, params, context);
+}
+
+function runBackwardDifference(params, context = {}) {
+  return runSolver('differentiation/backward', solveBackwardDifference, params, context);
+}
+
+function runCentralDifference(params, context = {}) {
+  return runSolver('differentiation/central', solveCentralDifference, params, context);
+}
+
+function runLagrangeDifferentiation(params, context = {}) {
+  return runSolver('differentiation/lagrange', solveLagrangeDifferentiation, params, context);
+}
+
+function runFunctionFiniteDifference(params, context = {}) {
+  return runSolver('differentiation/function-finite-difference', solveFunctionFiniteDifference, params, context);
+}
+
 function runRootSolver(method, solver, params, context) {
   return runSolver(method, solver, params, context);
 }
@@ -154,4 +179,9 @@ module.exports = {
   runSimpsonOneThirdIntegration,
   runSimpsonThreeEighthIntegration,
   runGaussLegendreIntegration,
+  runForwardDifference,
+  runBackwardDifference,
+  runCentralDifference,
+  runLagrangeDifferentiation,
+  runFunctionFiniteDifference,
 };

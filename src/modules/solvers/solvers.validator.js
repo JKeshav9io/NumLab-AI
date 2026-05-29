@@ -10,6 +10,8 @@ const {
 } = require('./interpolation/interpolation.constants');
 
 const ODE_STEP_MULTIPLE_TOLERANCE = 1e-10;
+const DIFFERENTIATION_POINT_TOLERANCE = 1e-10;
+const FUNCTION_FINITE_DIFFERENCE_VARIANTS = ['forward', 'backward', 'central'];
 
 const bisectionSchema = Joi.object({
   equation: Joi.string().trim().max(500).required(),
@@ -160,6 +162,29 @@ const gaussLegendreSchema = integrationBaseSchema.keys({
   points: Joi.number().integer().valid(2, 3, 4, 5).required(),
 });
 
+const differentiationPointSchema = Joi.object({
+  x: Joi.number().required(),
+  y: Joi.number().required(),
+}).required();
+
+const tabularDifferentiationSchema = Joi.object({
+  points: Joi.array().items(differentiationPointSchema).min(2).max(MAX_INTERPOLATION_POINTS).required(),
+  targetX: Joi.number().required(),
+  exactDerivative: Joi.number().optional(),
+  includeExplanation: Joi.boolean().default(true),
+  includeGraphData: Joi.boolean().default(true),
+});
+
+const functionFiniteDifferenceSchema = Joi.object({
+  equation: Joi.string().trim().max(500).required(),
+  targetX: Joi.number().required(),
+  h: Joi.number().positive().required(),
+  variant: Joi.string().valid(...FUNCTION_FINITE_DIFFERENCE_VARIANTS).default('central'),
+  exactDerivative: Joi.number().optional(),
+  includeExplanation: Joi.boolean().default(true),
+  includeGraphData: Joi.boolean().default(true),
+});
+
 function validateBisection(body) {
   return validateWithSchema(bisectionSchema, body);
 }
@@ -281,6 +306,41 @@ function validateSimpsonThreeEighthIntegration(body) {
 
 function validateGaussLegendreIntegration(body) {
   return validateWithSchema(gaussLegendreSchema, body);
+}
+
+function validateForwardDifference(body) {
+  return validateTabularDifferentiation(tabularDifferentiationSchema, body, {
+    methodName: 'Forward Difference',
+    requireEqualSpacing: true,
+    stencil: 'forward',
+  });
+}
+
+function validateBackwardDifference(body) {
+  return validateTabularDifferentiation(tabularDifferentiationSchema, body, {
+    methodName: 'Backward Difference',
+    requireEqualSpacing: true,
+    stencil: 'backward',
+  });
+}
+
+function validateCentralDifference(body) {
+  return validateTabularDifferentiation(tabularDifferentiationSchema, body, {
+    methodName: 'Central Difference',
+    requireEqualSpacing: true,
+    stencil: 'central',
+    minPoints: 3,
+  });
+}
+
+function validateLagrangeDifferentiation(body) {
+  return validateTabularDifferentiation(tabularDifferentiationSchema, body, {
+    methodName: 'Lagrange Differentiation',
+  });
+}
+
+function validateFunctionFiniteDifference(body) {
+  return validateWithSchema(functionFiniteDifferenceSchema, body);
 }
 
 function validateWithSchema(schema, body) {
@@ -498,6 +558,132 @@ function validateInterpolation(schema, body, options) {
   return value;
 }
 
+function validateTabularDifferentiation(schema, body, options) {
+  const value = validateWithSchema(schema, body);
+  const errors = [];
+  const minPoints = options.minPoints || 2;
+
+  if (value.points.length < minPoints) {
+    errors.push({
+      field: 'points',
+      message: `${options.methodName} requires at least ${minPoints} points`,
+    });
+  }
+
+  if (!Number.isFinite(value.targetX)) {
+    errors.push({
+      field: 'targetX',
+      message: 'targetX must be a finite number',
+    });
+  }
+
+  const seenXValues = new Set();
+
+  value.points.forEach((point, index) => {
+    if (!Number.isFinite(point.x)) {
+      errors.push({
+        field: `points.${index}.x`,
+        message: 'x must be a finite number',
+      });
+    }
+
+    if (!Number.isFinite(point.y)) {
+      errors.push({
+        field: `points.${index}.y`,
+        message: 'y must be a finite number',
+      });
+    }
+
+    if (seenXValues.has(point.x)) {
+      errors.push({
+        field: `points.${index}.x`,
+        message: 'x values must be unique',
+      });
+    }
+
+    seenXValues.add(point.x);
+  });
+
+  const sortedPoints = value.points.slice().sort((a, b) => a.x - b.x);
+  let h = null;
+
+  if (options.requireEqualSpacing && sortedPoints.length >= 2) {
+    h = sortedPoints[1].x - sortedPoints[0].x;
+
+    if (Math.abs(h) <= DIFFERENTIATION_POINT_TOLERANCE) {
+      errors.push({
+        field: 'points',
+        message: 'point spacing must not be zero',
+      });
+    }
+
+    for (let index = 1; index < sortedPoints.length - 1; index++) {
+      const actualSpacing = sortedPoints[index + 1].x - sortedPoints[index].x;
+
+      if (Math.abs(actualSpacing - h) > EQUAL_SPACING_TOLERANCE) {
+        errors.push({
+          field: 'points',
+          message: 'x values must be equally spaced for finite-difference differentiation',
+        });
+        break;
+      }
+    }
+  }
+
+  if (h !== null && errors.length === 0) {
+    const requiredXValues = buildRequiredStencilXValues(value.targetX, h, options.stencil);
+
+    requiredXValues.forEach((required) => {
+      if (!hasPointAt(sortedPoints, required.x)) {
+        errors.push({
+          field: 'points',
+          message: `${required.label} point at x=${required.x} is required for ${options.methodName}`,
+        });
+      }
+    });
+  }
+
+  if (errors.length > 0) {
+    throw new AppError(
+      'Validation failed',
+      400,
+      errorCodes.VALIDATION_ERROR,
+      { fields: errors }
+    );
+  }
+
+  return value;
+}
+
+function buildRequiredStencilXValues(targetX, h, stencil) {
+  if (stencil === 'forward') {
+    return [
+      { label: 'target', x: targetX },
+      { label: 'next', x: targetX + h },
+    ];
+  }
+
+  if (stencil === 'backward') {
+    return [
+      { label: 'previous', x: targetX - h },
+      { label: 'target', x: targetX },
+    ];
+  }
+
+  if (stencil === 'central') {
+    return [
+      { label: 'previous', x: targetX - h },
+      { label: 'next', x: targetX + h },
+    ];
+  }
+
+  return [];
+}
+
+function hasPointAt(points, x) {
+  return points.some((point) => Math.abs(point.x - x) <= DIFFERENTIATION_POINT_TOLERANCE);
+}
+
 function isWholeStepMultiple(x0, xn, h) {
   const rawSteps = (xn - x0) / h;
   return rawSteps > 0 && Math.abs(rawSteps - Math.round(rawSteps)) <= ODE_STEP_MULTIPLE_TOLERANCE;
@@ -526,4 +712,9 @@ module.exports = {
   validateSimpsonOneThirdIntegration,
   validateSimpsonThreeEighthIntegration,
   validateGaussLegendreIntegration,
+  validateForwardDifference,
+  validateBackwardDifference,
+  validateCentralDifference,
+  validateLagrangeDifferentiation,
+  validateFunctionFiniteDifference,
 };

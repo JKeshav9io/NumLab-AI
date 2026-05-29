@@ -35,6 +35,12 @@ The project is focused on making numerical methods easier to inspect, visualize,
   - Simpson's 1/3 Rule
   - Simpson's 3/8 Rule
   - Gauss-Legendre Quadrature
+- Numerical differentiation solvers:
+  - Forward Difference
+  - Backward Difference
+  - Central Difference
+  - Lagrange Differentiation
+  - Function-based Finite Difference
 - Joi request validation.
 - Structured success and error responses.
 - Request logging with pino.
@@ -87,6 +93,7 @@ numlab-backend/
         interpolation/
         ode/
         integration/
+        differentiation/
       users/
     tests/
   .env.example
@@ -181,6 +188,12 @@ POST /api/v1/solve/integration/trapezoidal
 POST /api/v1/solve/integration/simpson-13
 POST /api/v1/solve/integration/simpson-38
 POST /api/v1/solve/integration/gauss-legendre
+
+POST /api/v1/solve/differentiation/forward
+POST /api/v1/solve/differentiation/backward
+POST /api/v1/solve/differentiation/central
+POST /api/v1/solve/differentiation/lagrange
+POST /api/v1/solve/differentiation/function-finite-difference
 ```
 
 ## Example Requests
@@ -309,6 +322,38 @@ POST /api/v1/solve/integration/gauss-legendre
 }
 ```
 
+### Numerical Differentiation
+
+Tabular finite-difference and Lagrange differentiation endpoints use points:
+
+```json
+{
+  "points": [
+    { "x": 0, "y": 1 },
+    { "x": 1, "y": 4 },
+    { "x": 2, "y": 9 }
+  ],
+  "targetX": 1,
+  "exactDerivative": 4,
+  "includeExplanation": true,
+  "includeGraphData": true
+}
+```
+
+Function-based finite difference uses an equation and spacing:
+
+```json
+{
+  "equation": "x^2 + 2*x + 1",
+  "targetX": 1,
+  "h": 0.001,
+  "variant": "central",
+  "exactDerivative": 4,
+  "includeExplanation": true,
+  "includeGraphData": true
+}
+```
+
 ### Numerical Integration
 
 Composite Trapezoidal, Simpson's 1/3, and Simpson's 3/8 rules use `subintervals`:
@@ -393,7 +438,7 @@ Error responses use this envelope:
 
 ## Current Status
 
-- Implemented solver APIs for root finding, linear algebra, interpolation, ODE initial value problems, and numerical integration.
+- Implemented solver APIs for root finding, linear algebra, interpolation, ODE initial value problems, numerical integration, and numerical differentiation.
 - Other modules are planned but not implemented yet.
 
 ## Planned Improvements

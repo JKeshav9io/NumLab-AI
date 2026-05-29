@@ -28,5 +28,10 @@ router.post('/integration/trapezoidal', asyncHandler(solversController.solveTrap
 router.post('/integration/simpson-13', asyncHandler(solversController.solveSimpsonOneThirdIntegration));
 router.post('/integration/simpson-38', asyncHandler(solversController.solveSimpsonThreeEighthIntegration));
 router.post('/integration/gauss-legendre', asyncHandler(solversController.solveGaussLegendreIntegration));
+router.post('/differentiation/forward', asyncHandler(solversController.solveForwardDifference));
+router.post('/differentiation/backward', asyncHandler(solversController.solveBackwardDifference));
+router.post('/differentiation/central', asyncHandler(solversController.solveCentralDifference));
+router.post('/differentiation/lagrange', asyncHandler(solversController.solveLagrangeDifferentiation));
+router.post('/differentiation/function-finite-difference', asyncHandler(solversController.solveFunctionFiniteDifference));
 
 module.exports = router;

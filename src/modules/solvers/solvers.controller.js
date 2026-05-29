@@ -24,6 +24,11 @@ const {
   validateSimpsonOneThirdIntegration,
   validateSimpsonThreeEighthIntegration,
   validateGaussLegendreIntegration,
+  validateForwardDifference,
+  validateBackwardDifference,
+  validateCentralDifference,
+  validateLagrangeDifferentiation,
+  validateFunctionFiniteDifference,
 } = require('./solvers.validator');
 const { sendSuccess } = require('../../common/utils');
 
@@ -181,6 +186,41 @@ function solveGaussLegendreIntegration(req, res) {
   return sendSuccess(res, result, req.id);
 }
 
+function solveForwardDifference(req, res) {
+  const params = validateForwardDifference(req.body);
+  const result = solversService.runForwardDifference(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveBackwardDifference(req, res) {
+  const params = validateBackwardDifference(req.body);
+  const result = solversService.runBackwardDifference(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveCentralDifference(req, res) {
+  const params = validateCentralDifference(req.body);
+  const result = solversService.runCentralDifference(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveLagrangeDifferentiation(req, res) {
+  const params = validateLagrangeDifferentiation(req.body);
+  const result = solversService.runLagrangeDifferentiation(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
+function solveFunctionFiniteDifference(req, res) {
+  const params = validateFunctionFiniteDifference(req.body);
+  const result = solversService.runFunctionFiniteDifference(params, { requestId: req.id });
+
+  return sendSuccess(res, result, req.id);
+}
+
 module.exports = {
   solveBisection,
   solveNewtonRaphson,
@@ -204,4 +244,9 @@ module.exports = {
   solveSimpsonOneThirdIntegration,
   solveSimpsonThreeEighthIntegration,
   solveGaussLegendreIntegration,
+  solveForwardDifference,
+  solveBackwardDifference,
+  solveCentralDifference,
+  solveLagrangeDifferentiation,
+  solveFunctionFiniteDifference,
 };
