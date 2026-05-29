@@ -5,7 +5,7 @@ describe('config foundation', () => {
 
   beforeEach(() => {
     jest.resetModules();
-    process.env = {
+    const testEnv = {
       ...originalEnv,
       NODE_ENV: 'test',
       PORT: '3000',
@@ -15,7 +15,13 @@ describe('config foundation', () => {
       DB_PASSWORD: 'changeme',
       JWT_SECRET: 'test-secret',
       AI_API_KEY: 'test-key',
+      AI_MODEL: 'gpt-4o-mini',
+      AI_BASE_URL: 'https://api.openai.com/v1',
+      AI_MAX_TOKENS: '700',
+      AI_TIMEOUT_MS: '15000',
     };
+
+    process.env = testEnv;
   });
 
   afterEach(() => {
@@ -29,6 +35,9 @@ describe('config foundation', () => {
     expect(env.PORT).toBe(3000);
     expect(env.DB_PORT).toBe(5432);
     expect(env.AI_MODEL).toBe('gpt-4o-mini');
+    expect(env.AI_BASE_URL).toBe('https://api.openai.com/v1');
+    expect(env.AI_MAX_TOKENS).toBe(700);
+    expect(env.AI_TIMEOUT_MS).toBe(15000);
   });
 
   test('loads pino logger', () => {
