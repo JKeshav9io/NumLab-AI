@@ -25,7 +25,6 @@ model User {
   refreshTokens  RefreshToken[]
   aiExplanations AiExplanation[]
 
-  @@index([email])
   @@index([deletedAt])
   @@map("users")
 }
