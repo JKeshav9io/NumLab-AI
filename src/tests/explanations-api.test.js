@@ -3,6 +3,7 @@
 const originalFetch = global.fetch;
 const originalEnv = process.env;
 const { prisma } = require('../db');
+const { generateAccessToken } = require('../modules/auth/token');
 const { aiCircuitBreaker } = require('../modules/explanations/circuitBreaker');
 const { resetAiCallQuota } = require('../common/middleware/rateLimiter');
 const aiExplanationRepository = require('../db/repositories/aiExplanationRepository');
@@ -386,6 +387,135 @@ describe('Explanation API with Hardened Resilience & Caching', () => {
     } finally {
       await closeServer(server);
       aiExplanationRepository.findByPromptHash.mockRestore?.();
+    }
+  });
+
+  test('regression: authenticated POST /api/v1/explain populates userId on AiExplanation database row', async () => {
+    aiExplanationRepository.create.mockRestore?.();
+    jest.spyOn(aiExplanationRepository, 'findByPromptHash').mockResolvedValue(null);
+
+    const testUser = await prisma.user.create({
+      data: {
+        email: `explain_user_${Date.now()}@example.com`,
+        passwordHash: 'dummy_hash',
+      },
+    });
+    const accessToken = generateAccessToken(testUser.id);
+
+    global.fetch.mockImplementation((url, options) => {
+      if (String(url).startsWith('http://127.0.0.1')) {
+        return originalFetch(url, options);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          model: 'test-model',
+          choices: [{ message: { content: 'Authenticated explanation content.' } }],
+          usage: { prompt_tokens: 5, completion_tokens: 5 },
+        }),
+      });
+    });
+
+    const { server, baseUrl } = await startApp();
+    try {
+      const uniqueResult = buildSolverResult();
+      uniqueResult.input.equation = `x^2 - ${Date.now() % 10000}`;
+
+      const response = await fetch(`${baseUrl}/api/v1/explain`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          solverResult: uniqueResult,
+          focus: 'steps',
+        }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.success).toBe(true);
+
+      // Verify row in database
+      let savedRecord = null;
+      for (let attempt = 0; attempt < 25; attempt++) {
+        savedRecord = await prisma.aiExplanation.findFirst({
+          where: { userId: testUser.id },
+        });
+        if (savedRecord) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+
+      expect(savedRecord).not.toBeNull();
+      expect(savedRecord.userId).toBe(testUser.id);
+      expect(savedRecord.responseText).toBe('Authenticated explanation content.');
+    } finally {
+      await closeServer(server);
+      aiExplanationRepository.findByPromptHash.mockRestore?.();
+      await prisma.aiExplanation.deleteMany({ where: { userId: testUser.id } });
+      await prisma.user.deleteMany({ where: { id: testUser.id } });
+    }
+  });
+
+  test('regression: anonymous POST /api/v1/explain leaves userId null on AiExplanation database row', async () => {
+    aiExplanationRepository.create.mockRestore?.();
+    jest.spyOn(aiExplanationRepository, 'findByPromptHash').mockResolvedValue(null);
+
+    global.fetch.mockImplementation((url, options) => {
+      if (String(url).startsWith('http://127.0.0.1')) {
+        return originalFetch(url, options);
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          model: 'test-model',
+          choices: [{ message: { content: 'Anonymous explanation content.' } }],
+          usage: { prompt_tokens: 5, completion_tokens: 5 },
+        }),
+      });
+    });
+
+    const { server, baseUrl } = await startApp();
+    const uniqueEq = `x^2 - ${Date.now() % 10000}_anon`;
+    try {
+      const uniqueResult = buildSolverResult();
+      uniqueResult.input.equation = uniqueEq;
+
+      const response = await fetch(`${baseUrl}/api/v1/explain`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          solverResult: uniqueResult,
+          focus: 'steps',
+        }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.success).toBe(true);
+
+      // Verify row in database
+      let savedRecord = null;
+      for (let attempt = 0; attempt < 25; attempt++) {
+        savedRecord = await prisma.aiExplanation.findFirst({
+          where: { responseText: 'Anonymous explanation content.' },
+          orderBy: { createdAt: 'desc' },
+        });
+        if (savedRecord) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+
+      expect(savedRecord).not.toBeNull();
+      expect(savedRecord.userId).toBeNull();
+    } finally {
+      await closeServer(server);
+      aiExplanationRepository.findByPromptHash.mockRestore?.();
+      await prisma.aiExplanation.deleteMany({
+        where: { responseText: 'Anonymous explanation content.' },
+      });
     }
   });
 });

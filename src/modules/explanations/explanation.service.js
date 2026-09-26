@@ -22,7 +22,14 @@ const CACHE_TTL_MS = CACHE_TTL_DAYS * 24 * 60 * 60 * 1000;
  * @returns {Promise<Object>}
  */
 async function explainSolverResult(params) {
-  const { solverResult, focus = 'steps', includeGraphSummary = false, clientIp = 'anonymous', solverRunId = null } = params;
+  const {
+    solverResult,
+    focus = 'steps',
+    includeGraphSummary = false,
+    clientIp = 'anonymous',
+    solverRunId = null,
+    userId = null,
+  } = params;
 
   // 1. Generate deterministic SHA-256 cache key from normalized solver output + focus
   const promptHash = generatePromptHash({
@@ -81,6 +88,7 @@ async function explainSolverResult(params) {
   aiExplanationRepository
     .create({
       solverRunId,
+      userId,
       focusMode: focus,
       promptHash,
       responseText: providerResult.explanation,

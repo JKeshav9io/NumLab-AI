@@ -18,7 +18,8 @@ async function create(data) {
   try {
     const explanation = await prisma.aiExplanation.create({
       data: {
-        solverRunId: data.solverRunId,
+        solverRunId: data.solverRunId || null,
+        userId: data.userId || null,
         focusMode: data.focusMode || 'steps',
         promptHash: data.promptHash,
         responseText: data.responseText,

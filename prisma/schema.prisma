@@ -21,8 +21,9 @@ model User {
   createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  solverRuns    SolverRun[]
-  refreshTokens RefreshToken[]
+  solverRuns     SolverRun[]
+  refreshTokens  RefreshToken[]
+  aiExplanations AiExplanation[]
 
   @@index([email])
   @@index([deletedAt])
@@ -69,6 +70,7 @@ model SolverRun {
 model AiExplanation {
   id           String     @id @default(uuid()) @map("id") @db.Uuid
   solverRunId  String?    @map("solver_run_id") @db.Uuid
+  userId       String?    @map("user_id") @db.Uuid
   focusMode    String     @default("steps") @map("focus_mode") @db.VarChar(50)
   promptHash   String     @map("prompt_hash") @db.VarChar(64)
   responseText String     @map("response_text") @db.Text
@@ -76,9 +78,11 @@ model AiExplanation {
   createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
 
   solverRun    SolverRun? @relation(fields: [solverRunId], references: [id], onDelete: Cascade)
+  user         User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([promptHash])
   @@index([solverRunId])
+  @@index([userId])
   @@index([expiresAt])
   @@map("ai_explanations")
 }
