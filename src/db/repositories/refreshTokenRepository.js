@@ -120,9 +120,34 @@ async function revokeAllForUser(userId) {
   }
 }
 
+/**
+ * Deletes all expired refresh tokens up to the specified cutoff date.
+ * @param {Date} [now=new Date()]
+ * @returns {Promise<number>} Count of deleted records
+ */
+async function deleteExpired(now = new Date()) {
+  try {
+    const result = await prisma.refreshToken.deleteMany({
+      where: {
+        expiresAt: { lte: now },
+      },
+    });
+
+    return result.count;
+  } catch (error) {
+    logger.error({ err: error }, 'Failed to delete expired refresh tokens in database');
+    throw new AppError(
+      'Failed to clean up expired refresh tokens',
+      500,
+      errorCodes.DATABASE_ERROR
+    );
+  }
+}
+
 module.exports = {
   create,
   findByTokenHash,
   revokeToken,
   revokeAllForUser,
+  deleteExpired,
 };

@@ -52,4 +52,7 @@ module.exports = {
   prisma,
   healthCheck,
   gracefulShutdown,
+  get cleanupExpiredRecords() {
+    return require('./cleanup').cleanupExpiredRecords;
+  },
 };

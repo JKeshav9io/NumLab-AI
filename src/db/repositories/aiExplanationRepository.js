@@ -68,7 +68,36 @@ async function findByPromptHash(promptHash) {
   }
 }
 
+/**
+ * Deletes all expired AI explanations up to the specified cutoff date.
+ * Excludes records where expiresAt is null (persistent explanations).
+ * @param {Date} [now=new Date()]
+ * @returns {Promise<number>} Count of deleted records
+ */
+async function deleteExpired(now = new Date()) {
+  try {
+    const result = await prisma.aiExplanation.deleteMany({
+      where: {
+        expiresAt: {
+          not: null,
+          lte: now,
+        },
+      },
+    });
+
+    return result.count;
+  } catch (error) {
+    logger.error({ err: error }, 'Failed to delete expired AI explanations in database');
+    throw new AppError(
+      'Failed to clean up expired AI explanations',
+      500,
+      errorCodes.DATABASE_ERROR
+    );
+  }
+}
+
 module.exports = {
   create,
   findByPromptHash,
+  deleteExpired,
 };
