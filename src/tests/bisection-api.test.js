@@ -2,16 +2,10 @@
 
 describe('Bisection API', () => {
   test('POST /api/v1/solve/root/bisection returns a structured solver result', async () => {
-    jest.resetModules();
-    process.env.NODE_ENV = 'test';
-
-    const createApp = require('../app');
-    const app = createApp();
-    const server = app.listen(0);
+    const { server, baseUrl } = await startApp();
 
     try {
-      const { port } = server.address();
-      const response = await fetch(`http://127.0.0.1:${port}/api/v1/solve/root/bisection`, {
+      const response = await fetch(`${baseUrl}/api/v1/solve/root/bisection`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -37,16 +31,10 @@ describe('Bisection API', () => {
   });
 
   test('POST /api/v1/solve/root/bisection returns validation errors', async () => {
-    jest.resetModules();
-    process.env.NODE_ENV = 'test';
-
-    const createApp = require('../app');
-    const app = createApp();
-    const server = app.listen(0);
+    const { server, baseUrl } = await startApp();
 
     try {
-      const { port } = server.address();
-      const response = await fetch(`http://127.0.0.1:${port}/api/v1/solve/root/bisection`, {
+      const response = await fetch(`${baseUrl}/api/v1/solve/root/bisection`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -67,16 +55,10 @@ describe('Bisection API', () => {
   });
 
   test('POST /api/v1/solve/root/bisection returns invalid JSON errors', async () => {
-    jest.resetModules();
-    process.env.NODE_ENV = 'test';
-
-    const createApp = require('../app');
-    const app = createApp();
-    const server = app.listen(0);
+    const { server, baseUrl } = await startApp();
 
     try {
-      const { port } = server.address();
-      const response = await fetch(`http://127.0.0.1:${port}/api/v1/solve/root/bisection`, {
+      const response = await fetch(`${baseUrl}/api/v1/solve/root/bisection`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: '{ "equation": "x^3 - x - 2", ',
@@ -92,6 +74,24 @@ describe('Bisection API', () => {
   });
 });
 
+async function startApp() {
+  jest.resetModules();
+  process.env.NODE_ENV = 'test';
+
+  const solverRunRepository = require('../db/repositories/solverRunRepository');
+  jest.spyOn(solverRunRepository, 'create').mockResolvedValue({});
+
+  const createApp = require('../app');
+  const app = createApp();
+  const server = app.listen(0);
+  const { port } = server.address();
+
+  return {
+    server,
+    baseUrl: `http://127.0.0.1:${port}`,
+  };
+}
+
 function closeServer(server) {
   return new Promise((resolve, reject) => {
     server.close((err) => {
@@ -100,3 +100,4 @@ function closeServer(server) {
     });
   });
 }
+

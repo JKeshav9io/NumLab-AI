@@ -154,6 +154,9 @@ async function startApp() {
   jest.resetModules();
   process.env.NODE_ENV = 'test';
 
+  const solverRunRepository = require('../db/repositories/solverRunRepository');
+  jest.spyOn(solverRunRepository, 'create').mockResolvedValue({});
+
   const createApp = require('../app');
   const app = createApp();
   const server = app.listen(0);

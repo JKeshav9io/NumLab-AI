@@ -2,9 +2,12 @@
 
 const pino = require('pino');
 
+const isTest = process.env.NODE_ENV === 'test';
+const isProduction = process.env.NODE_ENV === 'production';
+
 module.exports = pino({
-  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
-  transport: process.env.NODE_ENV !== 'production'
+  level: isTest ? 'silent' : isProduction ? 'info' : 'debug',
+  transport: !isTest && !isProduction
     ? {
       target: 'pino-pretty',
       options: {

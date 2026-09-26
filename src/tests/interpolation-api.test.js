@@ -1,6 +1,19 @@
 'use strict';
 
 describe('Interpolation API', () => {
+  let server;
+  let baseUrl;
+
+  beforeAll(async () => {
+    const appContext = await startApp();
+    server = appContext.server;
+    baseUrl = appContext.baseUrl;
+  });
+
+  afterAll(async () => {
+    await closeServer(server);
+  });
+
   test.each([
     [
       '/api/v1/solve/interpolation/lagrange',
@@ -102,27 +115,21 @@ describe('Interpolation API', () => {
       6.25,
     ],
   ])('POST %s returns a structured interpolation result', async (path, requestBody, methodName, predictedY) => {
-    const { server, baseUrl } = await startApp();
+    const response = await fetch(`${baseUrl}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+    const body = await response.json();
 
-    try {
-      const response = await fetch(`${baseUrl}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-      const body = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(body.success).toBe(true);
-      expect(body.data.method).toBe(methodName);
-      expect(body.data.status).toBe('converged');
-      expect(body.data.finalAnswer.predictedY).toBeCloseTo(predictedY, 6);
-      expect(body.data.graphData.originalPoints.length).toBeGreaterThan(0);
-      expect(body.data.graphData.sampledCurve.length).toBe(81);
-      expect(body.data.graphData.predictedPoint).toHaveProperty('x', requestBody.targetX);
-    } finally {
-      await closeServer(server);
-    }
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data.method).toBe(methodName);
+    expect(body.data.status).toBe('converged');
+    expect(body.data.finalAnswer.predictedY).toBeCloseTo(predictedY, 6);
+    expect(body.data.graphData.originalPoints.length).toBeGreaterThan(0);
+    expect(body.data.graphData.sampledCurve.length).toBe(81);
+    expect(body.data.graphData.predictedPoint).toHaveProperty('x', requestBody.targetX);
   });
 
   test.each([
@@ -218,57 +225,47 @@ describe('Interpolation API', () => {
       },
     ],
   ])('POST interpolation endpoint validates %s', async (_name, path, requestBody) => {
-    const { server, baseUrl } = await startApp();
+    const response = await fetch(`${baseUrl}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+    const body = await response.json();
 
-    try {
-      const response = await fetch(`${baseUrl}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-      const body = await response.json();
-
-      expect(response.status).toBe(400);
-      expect(body.success).toBe(false);
-      expect(body.error.code).toBe('VALIDATION_ERROR');
-    } finally {
-      await closeServer(server);
-    }
+    expect(response.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 
   test('POST central difference rejects unsuitable Bessel targetX', async () => {
-    const { server, baseUrl } = await startApp();
+    const response = await fetch(`${baseUrl}/api/v1/solve/interpolation/central-difference`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        points: [
+          { x: 0, y: 1 },
+          { x: 1, y: 2 },
+          { x: 2, y: 5 },
+          { x: 3, y: 10 },
+          { x: 4, y: 17 },
+        ],
+        targetX: 1,
+        variant: 'bessel',
+      }),
+    });
+    const body = await response.json();
 
-    try {
-      const response = await fetch(`${baseUrl}/api/v1/solve/interpolation/central-difference`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          points: [
-            { x: 0, y: 1 },
-            { x: 1, y: 2 },
-            { x: 2, y: 5 },
-            { x: 3, y: 10 },
-            { x: 4, y: 17 },
-          ],
-          targetX: 1,
-          variant: 'bessel',
-        }),
-      });
-      const body = await response.json();
-
-      expect(response.status).toBe(400);
-      expect(body.success).toBe(false);
-      expect(body.error.code).toBe('SOLVER_PRECONDITION_FAILED');
-    } finally {
-      await closeServer(server);
-    }
+    expect(response.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('SOLVER_PRECONDITION_FAILED');
   });
 });
 
 async function startApp() {
-  jest.resetModules();
   process.env.NODE_ENV = 'test';
+
+  const solverRunRepository = require('../db/repositories/solverRunRepository');
+  jest.spyOn(solverRunRepository, 'create').mockResolvedValue({});
 
   const createApp = require('../app');
   const app = createApp();

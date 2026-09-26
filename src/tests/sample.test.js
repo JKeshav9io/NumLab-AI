@@ -8,11 +8,7 @@ describe('config foundation', () => {
     const testEnv = {
       ...originalEnv,
       NODE_ENV: 'test',
-      PORT: '3000',
-      DB_HOST: 'localhost',
-      DB_NAME: 'numlab',
-      DB_USER: 'numlab_user',
-      DB_PASSWORD: 'changeme',
+      DATABASE_URL: 'postgresql://numlab_user:changeme@localhost:5432/numlab',
       JWT_SECRET: 'test-secret',
       AI_API_KEY: 'test-key',
       AI_MODEL: 'gpt-4o-mini',
@@ -33,7 +29,7 @@ describe('config foundation', () => {
 
     expect(env.NODE_ENV).toBe('test');
     expect(env.PORT).toBe(3000);
-    expect(env.DB_PORT).toBe(5432);
+    expect(env.DATABASE_URL).toBe('postgresql://numlab_user:changeme@localhost:5432/numlab');
     expect(env.AI_MODEL).toBe('gpt-4o-mini');
     expect(env.AI_BASE_URL).toBe('https://api.openai.com/v1');
     expect(env.AI_MAX_TOKENS).toBe(700);
