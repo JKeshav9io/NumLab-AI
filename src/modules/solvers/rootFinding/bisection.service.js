@@ -2,6 +2,7 @@
 
 const { compileExpression, evaluateAt } = require('../../../common/utils/mathParser');
 const { AppError, errorCodes } = require('../../../common/errors');
+const round = require('../../../common/utils/round');
 
 const DEFAULT_GRAPH_POINT_COUNT = 80;
 
@@ -213,11 +214,6 @@ function buildGraphData(compiled, lowerBound, upperBound) {
   }
 
   return points;
-}
-
-function round(value, decimals = 10) {
-  const rounded = Number.parseFloat(value.toFixed(decimals));
-  return Object.is(rounded, -0) ? 0 : rounded;
 }
 
 module.exports = {

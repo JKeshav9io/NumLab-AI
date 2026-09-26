@@ -1,16 +1,13 @@
 'use strict';
 
+const round = require('../../../common/utils/round');
+
 function cloneMatrix(matrix) {
   return matrix.map((row) => row.slice());
 }
 
 function cloneVector(vector) {
   return vector.slice();
-}
-
-function round(value, decimals = 10) {
-  const rounded = Number.parseFloat(value.toFixed(decimals));
-  return Object.is(rounded, -0) ? 0 : rounded;
 }
 
 function roundVector(vector) {

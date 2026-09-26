@@ -1,13 +1,9 @@
 'use strict';
 
 const { evaluateAt } = require('../../../common/utils/mathParser');
+const round = require('../../../common/utils/round');
 
 const DEFAULT_GRAPH_POINT_COUNT = 80;
-
-function round(value, decimals = 10) {
-  const rounded = Number.parseFloat(value.toFixed(decimals));
-  return Object.is(rounded, -0) ? 0 : rounded;
-}
 
 function buildFunctionGraphData(compiled, minX, maxX, pointCount = DEFAULT_GRAPH_POINT_COUNT) {
   const points = [];
