@@ -217,6 +217,51 @@ describe('Authentication API & Protected Routes', () => {
       expect(body.success).toBe(false);
       expect(body.error.code).toBe('INVALID_TOKEN');
     });
+
+    test('regression: concurrent refresh calls with the same token result in exactly one success and one TOKEN_REVOKED', async () => {
+      // 1. Log in to get a fresh active token pair
+      const loginRes = await fetch(`${baseUrl}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: testEmail,
+          password: testPassword,
+        }),
+      });
+      const loginBody = await loginRes.json();
+      const tokenToRace = loginBody.data.tokens.refreshToken;
+
+      // 2. Dispatch two simultaneous refresh requests using the exact same refresh token
+      const [res1, res2] = await Promise.all([
+        fetch(`${baseUrl}/api/v1/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: tokenToRace }),
+        }),
+        fetch(`${baseUrl}/api/v1/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: tokenToRace }),
+        }),
+      ]);
+
+      const [body1, body2] = await Promise.all([res1.json(), res2.json()]);
+
+      const statuses = [res1.status, res2.status].sort();
+      // Exactly ONE must succeed (200) and ONE must fail with 401
+      expect(statuses).toEqual([200, 401]);
+
+      const successfulBody = res1.status === 200 ? body1 : body2;
+      const failedBody = res1.status === 401 ? body1 : body2;
+
+      expect(successfulBody.success).toBe(true);
+      expect(successfulBody.data.tokens.accessToken).toBeDefined();
+      expect(successfulBody.data.tokens.refreshToken).toBeDefined();
+
+      expect(failedBody.success).toBe(false);
+      expect(failedBody.error.code).toBe('TOKEN_REVOKED');
+      expect(failedBody.error.message).toContain('revoked');
+    });
   });
 
   describe('Protected Routes & Authorization Middleware', () => {

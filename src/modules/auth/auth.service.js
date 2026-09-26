@@ -122,8 +122,16 @@ async function refresh(rawRefreshToken) {
   }
 
   // REFRESH TOKEN ROTATION:
-  // Invalidate the old refresh token immediately before issuing the new pair
-  await refreshTokenRepository.revokeToken(tokenHash);
+  // Atomically invalidate the old refresh token. If 0 rows were updated,
+  // a concurrent request or replay already consumed this token.
+  const revokedCount = await refreshTokenRepository.revokeToken(tokenHash);
+  if (!revokedCount || revokedCount === 0) {
+    throw new AppError(
+      'Refresh token is invalid or has been revoked',
+      401,
+      errorCodes.TOKEN_REVOKED
+    );
+  }
 
   // Issue brand new token pair
   const tokens = await issueTokenPair(decoded.sub);
