@@ -21,8 +21,7 @@ pids/
 *.pid.lock
 scratch/
 tmp/
-temp/
-reports/
+/reports/
 
 # Coverage and build output
 coverage/
