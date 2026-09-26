@@ -13,6 +13,7 @@ const explanationsRoutes = require('./modules/explanations/explanations.routes')
 const solversRoutes = require('./modules/solvers/solvers.routes');
 const authRoutes = require('./modules/auth/auth.routes');
 const usersRoutes = require('./modules/users/users.routes');
+const { healthCheck } = require('./db');
 const reportsRoutes = require('./modules/reports/reports.routes');
 
 function createApp(options = {}) {
@@ -28,8 +29,10 @@ function createApp(options = {}) {
   app.use(express.json({ limit: '1mb' }));
   app.use(requestLogger);
 
-  app.get('/health', (_req, res) => {
-    res.json({ status: 'ok' });
+  app.get('/health', async (_req, res) => {
+    const health = await healthCheck();
+    const status = health.status === 'healthy' ? 200 : 503;
+    res.status(status).json(health);
   });
 
   // Public numerical solver & explanation routes (rate-limited, no auth required)
