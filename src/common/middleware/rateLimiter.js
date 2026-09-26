@@ -44,28 +44,33 @@ const authLimiter = rateLimit({
   message: {
     success: false,
     error: {
-      code: 'RATE_LIMIT_EXCEEDED',
+      code: errorCodes.RATE_LIMIT_EXCEEDED,
       message: 'Too many authentication attempts. Please try again in 15 minutes.',
     },
   },
 });
 
-// User-centric rate limiter for CPU-intensive PDF report generation (10 reports / 15m)
-const reportLimiter = rateLimit({
-  windowMs: REPORT_LIMIT_WINDOW_MS,
-  limit: REPORT_LIMIT_MAX,
-  standardHeaders: true,
-  legacyHeaders: false,
-  validate: false,
-  keyGenerator: (req) => req.user?.id || req.ip || 'anonymous',
-  message: {
-    success: false,
-    error: {
-      code: 'RATE_LIMIT_EXCEEDED',
-      message: 'Report generation quota exceeded. Please wait 15 minutes before requesting more PDF reports.',
+function createReportLimiter(options = {}) {
+  return rateLimit({
+    windowMs: options.windowMs || REPORT_LIMIT_WINDOW_MS,
+    limit: options.limit || REPORT_LIMIT_MAX,
+    standardHeaders: true,
+    legacyHeaders: false,
+    validate: false,
+    keyGenerator: (req) => req.user?.id || req.ip || 'anonymous',
+    message: {
+      success: false,
+      error: {
+        code: errorCodes.RATE_LIMIT_EXCEEDED,
+        message: 'Report generation quota exceeded. Please wait 15 minutes before requesting more PDF reports.',
+      },
     },
-  },
-});
+    ...options,
+  });
+}
+
+// User-centric rate limiter for CPU-intensive PDF report generation (10 reports / 15m)
+const reportLimiter = createReportLimiter();
 
 // In-memory sliding window budget tracker for uncached billable AI provider calls
 const aiCallTracker = new Map();
@@ -107,6 +112,7 @@ module.exports = {
   explainLimiter,
   authLimiter,
   reportLimiter,
+  createReportLimiter,
   checkAiCallQuota,
   resetAiCallQuota,
   SOLVE_LIMIT_WINDOW_MS,

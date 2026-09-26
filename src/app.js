@@ -8,13 +8,14 @@ const compression = require('compression');
 const errorHandler = require('./common/middleware/errorHandler');
 const requestLogger = require('./common/middleware/requestLogger');
 const { explainLimiter, solveLimiter, reportLimiter } = require('./common/middleware/rateLimiter');
+const authenticate = require('./common/middleware/authenticate');
 const explanationsRoutes = require('./modules/explanations/explanations.routes');
 const solversRoutes = require('./modules/solvers/solvers.routes');
 const authRoutes = require('./modules/auth/auth.routes');
 const usersRoutes = require('./modules/users/users.routes');
 const reportsRoutes = require('./modules/reports/reports.routes');
 
-function createApp() {
+function createApp(options = {}) {
   const app = express();
 
   app.use(helmet());
@@ -38,7 +39,11 @@ function createApp() {
   // Authentication, user, & report routes
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/users', usersRoutes);
-  app.use('/api/v1/reports', reportLimiter, reportsRoutes);
+
+  // Protected PDF report routes: authenticate runs BEFORE reportLimiter
+  // so keyGenerator can key by authenticated req.user.id
+  const activeReportLimiter = options.reportLimiter || reportLimiter;
+  app.use('/api/v1/reports', authenticate, activeReportLimiter, reportsRoutes);
 
   app.use(errorHandler);
 

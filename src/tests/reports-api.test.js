@@ -254,11 +254,73 @@ describe('Reports API (PDF Lab Report Generation)', () => {
       await closeServer(server);
     }
   });
+
+  test('regression: reportLimiter keys by authenticated userId, not IP (independent quotas per user on same IP)', async () => {
+    const { createReportLimiter } = require('../common/middleware/rateLimiter');
+    // Configure rate limiter with quota of 2 reports per window for testing
+    const testLimiter = createReportLimiter({ limit: 2 });
+    const { server, baseUrl } = await startApp({ reportLimiter: testLimiter });
+
+    try {
+      // User A makes 2 requests (exhausts User A's quota) from the client IP (127.0.0.1)
+      const resA1 = await fetch(`${baseUrl}/api/v1/reports/${runUserAWithoutAi.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userAToken}` },
+      });
+      expect(resA1.status).toBe(200);
+
+      const resA2 = await fetch(`${baseUrl}/api/v1/reports/${runUserAWithoutAi.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userAToken}` },
+      });
+      expect(resA2.status).toBe(200);
+
+      // User A's 3rd request is blocked with 429
+      const resA3 = await fetch(`${baseUrl}/api/v1/reports/${runUserAWithoutAi.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userAToken}` },
+      });
+      expect(resA3.status).toBe(429);
+      const bodyA3 = await resA3.json();
+      expect(bodyA3.error.code).toBe('RATE_LIMIT_EXCEEDED');
+
+      // User B makes a request from the EXACT SAME client IP (127.0.0.1).
+      // If reportLimiter were keyed by IP (the bug), User B would be blocked with 429.
+      // Because authenticate runs before reportLimiter and keys by req.user.id, User B succeeds.
+      const resB1 = await fetch(`${baseUrl}/api/v1/reports/${runUserB.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userBToken}` },
+      });
+      expect(resB1.status).toBe(200);
+
+      const resB2 = await fetch(`${baseUrl}/api/v1/reports/${runUserB.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userBToken}` },
+      });
+      expect(resB2.status).toBe(200);
+
+      // User B's 3rd request hits their own quota limit
+      const resB3 = await fetch(`${baseUrl}/api/v1/reports/${runUserB.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userBToken}` },
+      });
+      expect(resB3.status).toBe(429);
+
+      // User A is still blocked
+      const resA4 = await fetch(`${baseUrl}/api/v1/reports/${runUserAWithoutAi.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${userAToken}` },
+      });
+      expect(resA4.status).toBe(429);
+    } finally {
+      await closeServer(server);
+    }
+  });
 });
 
-async function startApp() {
+async function startApp(options = {}) {
   const createApp = require('../app');
-  const app = createApp();
+  const app = createApp(options);
   const server = app.listen(0);
   const { port } = server.address();
 
