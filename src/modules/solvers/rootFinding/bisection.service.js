@@ -222,5 +222,4 @@ function round(value, decimals = 10) {
 
 module.exports = {
   solveBisection,
-  bisection: solveBisection,
 };

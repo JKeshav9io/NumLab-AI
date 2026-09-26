@@ -1,2 +1,0 @@
-// validators placeholder
-module.exports = {};
