@@ -22,14 +22,19 @@ function buildFunctionGraphData(compiled, minX, maxX, pointCount = DEFAULT_GRAPH
   return points;
 }
 
-function buildExplanation(methodName, status, iterationsUsed, reason, steps) {
+function buildExplanation(methodName, status, iterationsUsed, reason, steps, options = {}) {
+  const summary = options.summary || (status === 'converged'
+    ? `${methodName} converged because ${reason.toLowerCase()}.`
+    : `${methodName} stopped with status "${status}" because ${reason.toLowerCase()}.`);
+
+  const stopMessage = options.stopMessage ||
+    `Stop when the tolerance is reached, an exact root is found, the method fails, or the iteration limit is reached. Iterations used: ${iterationsUsed}.`;
+
   return {
-    summary: status === 'converged'
-      ? `${methodName} converged because ${reason.toLowerCase()}.`
-      : `${methodName} stopped with status "${status}" because ${reason.toLowerCase()}.`,
+    summary,
     steps: [
       ...steps,
-      `Stop when the tolerance is reached, an exact root is found, the method fails, or the iteration limit is reached. Iterations used: ${iterationsUsed}.`,
+      stopMessage,
     ],
   };
 }

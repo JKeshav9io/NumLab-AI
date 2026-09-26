@@ -2,9 +2,12 @@
 
 const { compileExpression, evaluateAt } = require('../../../common/utils/mathParser');
 const { AppError, errorCodes } = require('../../../common/errors');
-const round = require('../../../common/utils/round');
-
-const DEFAULT_GRAPH_POINT_COUNT = 80;
+const {
+  buildExplanation,
+  buildFunctionGraphData,
+  buildResult,
+  round,
+} = require('./rootFinding.utils');
 
 function solveBisection(params) {
   const start = Date.now();
@@ -31,7 +34,7 @@ function solveBisection(params) {
   const initialFB = evaluateAt(compiled, { x: upperBound });
 
   if (initialFA === 0) {
-    return buildResult({
+    return buildMethodResult({
       status: 'converged',
       input,
       iterations: [],
@@ -42,15 +45,16 @@ function solveBisection(params) {
         converged: true,
         reason: 'Lower bound is an exact root',
       },
-      explanation: includeExplanation ? buildExplanation('converged', 0, 'Lower bound is an exact root') : null,
-      graphData: includeGraphData ? buildGraphData(compiled, lowerBound, upperBound) : [],
+      includeExplanation,
+      includeGraphData,
+      compiled,
       warnings: [],
       start,
     });
   }
 
   if (initialFB === 0) {
-    return buildResult({
+    return buildMethodResult({
       status: 'converged',
       input,
       iterations: [],
@@ -61,8 +65,9 @@ function solveBisection(params) {
         converged: true,
         reason: 'Upper bound is an exact root',
       },
-      explanation: includeExplanation ? buildExplanation('converged', 0, 'Upper bound is an exact root') : null,
-      graphData: includeGraphData ? buildGraphData(compiled, lowerBound, upperBound) : [],
+      includeExplanation,
+      includeGraphData,
+      compiled,
       warnings: [],
       start,
     });
@@ -124,7 +129,7 @@ function solveBisection(params) {
 
     if (exactRoot || toleranceReached) {
       const reason = exactRoot ? 'Exact root found' : 'Tolerance reached';
-      return buildResult({
+      return buildMethodResult({
         status: 'converged',
         input,
         iterations,
@@ -135,8 +140,9 @@ function solveBisection(params) {
           converged: true,
           reason,
         },
-        explanation: includeExplanation ? buildExplanation('converged', iteration, reason) : null,
-        graphData: includeGraphData ? buildGraphData(compiled, lowerBound, upperBound) : [],
+        includeExplanation,
+        includeGraphData,
+        compiled,
         warnings,
         start,
       });
@@ -153,7 +159,7 @@ function solveBisection(params) {
 
   warnings.push(`Reached max iterations (${maxIterations}) before meeting tolerance`);
 
-  return buildResult({
+  return buildMethodResult({
     status: 'max_iterations_reached',
     input,
     iterations,
@@ -164,56 +170,54 @@ function solveBisection(params) {
       converged: false,
       reason: 'Maximum iterations reached',
     },
-    explanation: includeExplanation
-      ? buildExplanation('max_iterations_reached', maxIterations, 'Maximum iterations reached')
-      : null,
-    graphData: includeGraphData ? buildGraphData(compiled, lowerBound, upperBound) : [],
+    includeExplanation,
+    includeGraphData,
+    compiled,
     warnings,
     start,
   });
 }
 
-function buildResult({ status, input, iterations, finalAnswer, explanation, graphData, warnings, start }) {
-  return {
+function buildMethodResult({
+  status,
+  input,
+  iterations,
+  finalAnswer,
+  includeExplanation,
+  includeGraphData,
+  compiled,
+  warnings,
+  start,
+}) {
+  return buildResult({
     method: 'Bisection Method',
     status,
     input,
     iterations,
     finalAnswer,
-    explanation,
-    graphData,
+    explanation: includeExplanation
+      ? buildExplanation(
+          'The bisection method',
+          status,
+          finalAnswer.iterationsUsed,
+          finalAnswer.reason,
+          [
+            'Check that the function changes sign across the starting interval.',
+            'Compute the midpoint c = (a + b) / 2.',
+            'Evaluate f(c) and keep the subinterval where the sign change remains.',
+          ],
+          {
+            summary: status === 'converged'
+              ? `The bisection method converged because the interval was repeatedly halved until ${finalAnswer.reason.toLowerCase()}.`
+              : 'The bisection method reduced the interval but did not meet the stopping criteria in time.',
+            stopMessage: `Stop when the tolerance is reached, an exact midpoint root is found, or the iteration limit is reached. Iterations used: ${finalAnswer.iterationsUsed}.`,
+          }
+        )
+      : null,
+    graphData: includeGraphData ? buildFunctionGraphData(compiled, input.lowerBound, input.upperBound) : [],
     warnings,
-    executionTimeMs: Date.now() - start,
-  };
-}
-
-function buildExplanation(status, iterationsUsed, reason) {
-  return {
-    summary: status === 'converged'
-      ? `The bisection method converged because the interval was repeatedly halved until ${reason.toLowerCase()}.`
-      : 'The bisection method reduced the interval but did not meet the stopping criteria in time.',
-    steps: [
-      'Check that the function changes sign across the starting interval.',
-      'Compute the midpoint c = (a + b) / 2.',
-      'Evaluate f(c) and keep the subinterval where the sign change remains.',
-      `Stop when the tolerance is reached, an exact midpoint root is found, or the iteration limit is reached. Iterations used: ${iterationsUsed}.`,
-    ],
-  };
-}
-
-function buildGraphData(compiled, lowerBound, upperBound) {
-  const points = [];
-  const step = (upperBound - lowerBound) / DEFAULT_GRAPH_POINT_COUNT;
-
-  for (let i = 0; i <= DEFAULT_GRAPH_POINT_COUNT; i++) {
-    const x = i === DEFAULT_GRAPH_POINT_COUNT ? upperBound : lowerBound + step * i;
-    points.push({
-      x: round(x),
-      y: round(evaluateAt(compiled, { x })),
-    });
-  }
-
-  return points;
+    start,
+  });
 }
 
 module.exports = {
