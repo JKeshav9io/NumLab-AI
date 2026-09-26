@@ -41,8 +41,7 @@ async function generateSolverReportBuffer(run) {
           new AppError(
             'Failed to generate PDF report',
             500,
-            errorCodes.REPORT_GENERATION_ERROR,
-            { originalError: err.message }
+            errorCodes.REPORT_GENERATION_ERROR
           )
         );
       });
@@ -58,8 +57,7 @@ async function generateSolverReportBuffer(run) {
         new AppError(
           'Failed to generate PDF report',
           500,
-          errorCodes.REPORT_GENERATION_ERROR,
-          { originalError: error.message }
+          errorCodes.REPORT_GENERATION_ERROR
         )
       );
     }

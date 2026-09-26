@@ -1,6 +1,7 @@
 'use strict';
 
 const { prisma } = require('../index');
+const logger = require('../../config/logger');
 const { AppError, errorCodes } = require('../../common/errors');
 
 /**
@@ -25,11 +26,11 @@ async function create(data) {
 
     return run;
   } catch (error) {
+    logger.error({ err: error, method: data.method }, 'Failed to persist solver run in database');
     throw new AppError(
       'Failed to persist solver run',
       500,
-      errorCodes.DATABASE_ERROR,
-      { method: data.method, originalError: error.message }
+      errorCodes.DATABASE_ERROR
     );
   }
 }
@@ -58,11 +59,11 @@ async function findByUserId(userId, { limit = 20, offset = 0 } = {}) {
 
     return { runs, total };
   } catch (error) {
+    logger.error({ err: error, userId }, 'Failed to query solver runs for user in database');
     throw new AppError(
       'Failed to query solver runs for user',
       500,
-      errorCodes.DATABASE_ERROR,
-      { userId, originalError: error.message }
+      errorCodes.DATABASE_ERROR
     );
   }
 }
@@ -83,11 +84,11 @@ async function findById(id) {
       },
     });
   } catch (error) {
+    logger.error({ err: error, id }, 'Failed to query solver run by id in database');
     throw new AppError(
       'Failed to query solver run by id',
       500,
-      errorCodes.DATABASE_ERROR,
-      { id, originalError: error.message }
+      errorCodes.DATABASE_ERROR
     );
   }
 }

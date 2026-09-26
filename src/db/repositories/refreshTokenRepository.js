@@ -1,6 +1,7 @@
 'use strict';
 
 const { prisma } = require('../index');
+const logger = require('../../config/logger');
 const { AppError, errorCodes } = require('../../common/errors');
 
 /**
@@ -21,11 +22,11 @@ async function create(data) {
       },
     });
   } catch (error) {
+    logger.error({ err: error, userId: data.userId }, 'Failed to persist refresh token in database');
     throw new AppError(
       'Failed to persist refresh token',
       500,
-      errorCodes.DATABASE_ERROR,
-      { userId: data.userId, originalError: error.message }
+      errorCodes.DATABASE_ERROR
     );
   }
 }
@@ -54,11 +55,11 @@ async function findByTokenHash(tokenHash) {
       },
     });
   } catch (error) {
+    logger.error({ err: error }, 'Failed to query refresh token by hash in database');
     throw new AppError(
       'Failed to query refresh token by hash',
       500,
-      errorCodes.DATABASE_ERROR,
-      { originalError: error.message }
+      errorCodes.DATABASE_ERROR
     );
   }
 }
@@ -82,11 +83,11 @@ async function revokeToken(tokenHash) {
 
     return result.count;
   } catch (error) {
+    logger.error({ err: error }, 'Failed to revoke refresh token in database');
     throw new AppError(
       'Failed to revoke refresh token',
       500,
-      errorCodes.DATABASE_ERROR,
-      { originalError: error.message }
+      errorCodes.DATABASE_ERROR
     );
   }
 }
@@ -110,11 +111,11 @@ async function revokeAllForUser(userId) {
 
     return result.count;
   } catch (error) {
+    logger.error({ err: error, userId }, 'Failed to revoke all user refresh tokens in database');
     throw new AppError(
       'Failed to revoke all user refresh tokens',
       500,
-      errorCodes.DATABASE_ERROR,
-      { userId, originalError: error.message }
+      errorCodes.DATABASE_ERROR
     );
   }
 }

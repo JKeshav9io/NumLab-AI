@@ -1,6 +1,7 @@
 'use strict';
 
 const { prisma } = require('../index');
+const logger = require('../../config/logger');
 const { AppError, errorCodes } = require('../../common/errors');
 
 /**
@@ -31,11 +32,11 @@ async function createUser(data) {
       );
     }
 
+    logger.error({ err: error }, 'Failed to create user record in database');
     throw new AppError(
       'Failed to create user record',
       500,
-      errorCodes.DATABASE_ERROR,
-      { originalError: error.message }
+      errorCodes.DATABASE_ERROR
     );
   }
 }
@@ -54,11 +55,11 @@ async function findByEmail(email) {
       },
     });
   } catch (error) {
+    logger.error({ err: error, email }, 'Failed to query user by email in database');
     throw new AppError(
       'Failed to query user by email',
       500,
-      errorCodes.DATABASE_ERROR,
-      { originalError: error.message }
+      errorCodes.DATABASE_ERROR
     );
   }
 }
@@ -77,11 +78,11 @@ async function findById(id) {
       },
     });
   } catch (error) {
+    logger.error({ err: error, id }, 'Failed to query user by id in database');
     throw new AppError(
       'Failed to query user by id',
       500,
-      errorCodes.DATABASE_ERROR,
-      { id, originalError: error.message }
+      errorCodes.DATABASE_ERROR
     );
   }
 }
@@ -109,11 +110,11 @@ async function softDeleteUser(id) {
       );
     }
 
+    logger.error({ err: error, id }, 'Failed to soft-delete user record in database');
     throw new AppError(
       'Failed to soft-delete user record',
       500,
-      errorCodes.DATABASE_ERROR,
-      { id, originalError: error.message }
+      errorCodes.DATABASE_ERROR
     );
   }
 }

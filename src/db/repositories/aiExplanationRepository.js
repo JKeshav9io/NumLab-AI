@@ -1,6 +1,7 @@
 'use strict';
 
 const { prisma } = require('../index');
+const logger = require('../../config/logger');
 const { AppError, errorCodes } = require('../../common/errors');
 
 /**
@@ -27,11 +28,11 @@ async function create(data) {
 
     return explanation;
   } catch (error) {
+    logger.error({ err: error, solverRunId: data.solverRunId }, 'Failed to persist AI explanation in database');
     throw new AppError(
       'Failed to persist AI explanation',
       500,
-      errorCodes.DATABASE_ERROR,
-      { solverRunId: data.solverRunId, originalError: error.message }
+      errorCodes.DATABASE_ERROR
     );
   }
 }
@@ -57,11 +58,11 @@ async function findByPromptHash(promptHash) {
       orderBy: { createdAt: 'desc' },
     });
   } catch (error) {
+    logger.error({ err: error, promptHash }, 'Failed to query cached AI explanation in database');
     throw new AppError(
       'Failed to query cached AI explanation',
       500,
-      errorCodes.DATABASE_ERROR,
-      { promptHash, originalError: error.message }
+      errorCodes.DATABASE_ERROR
     );
   }
 }

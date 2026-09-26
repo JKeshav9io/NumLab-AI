@@ -267,4 +267,39 @@ describe('Solver Run Persistence & History API', () => {
 
     spy.mockRestore();
   });
+
+  test('regression: database error details and raw Postgres messages are never leaked to client', async () => {
+    const rawPostgresErrorMessage = 'FATAL: relation "solver_runs" does not exist at character 42';
+    const { AppError, errorCodes } = require('../common/errors');
+
+    const spy = jest.spyOn(solverRunRepository, 'findByUserId').mockRejectedValueOnce(
+      new AppError(
+        'Failed to query solver runs for user',
+        500,
+        errorCodes.DATABASE_ERROR,
+        { originalError: rawPostgresErrorMessage }
+      )
+    );
+
+    const res = await fetch(`${baseUrl}/api/v1/users/me/history`, {
+      headers: {
+        Authorization: `Bearer ${tokenA}`,
+      },
+    });
+
+    const responseText = await res.text();
+    const body = JSON.parse(responseText);
+
+    expect(res.status).toBe(500);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('DATABASE_ERROR');
+    expect(body.error.message).toBe('Failed to query solver runs for user');
+
+    // Crucial security check: raw Postgres error message & originalError must NOT appear in response body
+    expect(responseText).not.toContain(rawPostgresErrorMessage);
+    expect(responseText).not.toContain('originalError');
+    expect(body.error.details?.originalError).toBeUndefined();
+
+    spy.mockRestore();
+  });
 });

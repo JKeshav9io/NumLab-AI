@@ -15,13 +15,23 @@ module.exports = function errorHandler(err, req, res, _next) {
   }
 
   if (err instanceof AppError) {
+    if (err.statusCode >= 500) {
+      logger.error({ err, requestId: req.id, details: err.details }, 'Server error encountered');
+    }
+
     const error = {
       code: err.code,
       message: err.message,
     };
 
     if (err.details) {
-      error.details = err.details;
+      // Redact internal database error messages and stack details from client-facing responses
+      const sanitizedDetails = { ...err.details };
+      delete sanitizedDetails.originalError;
+
+      if (Object.keys(sanitizedDetails).length > 0) {
+        error.details = sanitizedDetails;
+      }
     }
 
     return res.status(err.statusCode).json({
