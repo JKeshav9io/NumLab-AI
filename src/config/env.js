@@ -17,14 +17,21 @@ for (const key of required) {
   }
 }
 
-// Security guardrail: Warn if using default or weak secret
+// Security guardrail: Require strong secret in production; warn in development/test
 if (
   process.env.JWT_SECRET === 'change-this-to-a-long-random-string' ||
   process.env.JWT_SECRET.length < 32
 ) {
-  console.warn(
-    '[config] ⚠️  SECURITY WARNING: JWT_SECRET appears to use a default placeholder or is under 32 characters. Ensure a cryptographically secure 256-bit random secret is set in production.'
-  );
+  if (process.env.NODE_ENV === 'production') {
+    console.error(
+      '[config] ❌ FATAL SECURITY ERROR: JWT_SECRET appears to use a default placeholder or is under 32 characters. Production requires a cryptographically secure secret of at least 32 characters.'
+    );
+    process.exit(1);
+  } else {
+    console.warn(
+      '[config] ⚠️  SECURITY WARNING: JWT_SECRET appears to use a default placeholder or is under 32 characters. Ensure a cryptographically secure 256-bit random secret is set in production.'
+    );
+  }
 }
 
 function parseIntegerEnv(key, fallback) {

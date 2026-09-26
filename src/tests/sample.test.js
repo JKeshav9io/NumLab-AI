@@ -42,6 +42,52 @@ describe('config foundation', () => {
     expect(typeof logger.info).toBe('function');
     expect(typeof logger.error).toBe('function');
   });
+
+  test('regression: hard-fails process.exit(1) on weak JWT_SECRET in production mode', () => {
+    const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    process.env = {
+      ...process.env,
+      NODE_ENV: 'production',
+      PORT: '3000',
+      DATABASE_URL: 'postgresql://localhost:5432/db',
+      JWT_SECRET: 'weak-secret-under-32-chars',
+      AI_API_KEY: 'test-key',
+    };
+
+    require('../config/env');
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('FATAL SECURITY ERROR: JWT_SECRET appears to use a default placeholder or is under 32 characters')
+    );
+
+    exitSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+  });
+
+  test('regression: permits strong 32+ char JWT_SECRET in production mode without exiting', () => {
+    const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => {});
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    process.env = {
+      ...process.env,
+      NODE_ENV: 'production',
+      PORT: '3000',
+      DATABASE_URL: 'postgresql://localhost:5432/db',
+      JWT_SECRET: 'a-cryptographically-secure-random-secret-with-plenty-of-entropy-over-32-chars',
+      AI_API_KEY: 'test-key',
+    };
+
+    const env = require('../config/env');
+
+    expect(exitSpy).not.toHaveBeenCalled();
+    expect(env.JWT_SECRET).toBe('a-cryptographically-secure-random-secret-with-plenty-of-entropy-over-32-chars');
+
+    exitSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+  });
 });
 
 describe('Express app foundation', () => {
