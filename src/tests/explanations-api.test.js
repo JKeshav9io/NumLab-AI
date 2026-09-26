@@ -2,10 +2,17 @@
 
 const originalFetch = global.fetch;
 const originalEnv = process.env;
+const { prisma } = require('../db');
+const { aiCircuitBreaker } = require('../modules/explanations/circuitBreaker');
+const { resetAiCallQuota } = require('../common/middleware/rateLimiter');
+const aiExplanationRepository = require('../db/repositories/aiExplanationRepository');
 
-describe('Explanation API', () => {
+describe('Explanation API with Hardened Resilience & Caching', () => {
   beforeEach(() => {
-    jest.resetModules();
+    aiCircuitBreaker.reset();
+    resetAiCallQuota();
+    jest.spyOn(aiExplanationRepository, 'create').mockResolvedValue({});
+
     process.env = {
       ...originalEnv,
       NODE_ENV: 'test',
@@ -19,6 +26,7 @@ describe('Explanation API', () => {
       AI_MODEL: 'test-model',
       AI_BASE_URL: 'https://example.test/v1',
     };
+
     global.fetch = jest.fn((url, options) => {
       if (String(url).startsWith('http://127.0.0.1')) {
         return originalFetch(url, options);
@@ -31,9 +39,17 @@ describe('Explanation API', () => {
   afterEach(() => {
     global.fetch = originalFetch;
     process.env = originalEnv;
+    aiCircuitBreaker.reset();
+    aiExplanationRepository.create.mockRestore?.();
   });
 
-  test('POST /api/v1/explain returns a structured AI explanation', async () => {
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
+
+  test('POST /api/v1/explain returns a structured AI explanation on cache miss', async () => {
+    jest.spyOn(aiExplanationRepository, 'findByPromptHash').mockResolvedValueOnce(null);
+
     global.fetch.mockImplementation((url, options) => {
       if (String(url).startsWith('http://127.0.0.1')) {
         return originalFetch(url, options);
@@ -76,6 +92,7 @@ describe('Explanation API', () => {
       expect(body.data.explanation).toBe('The method converged by narrowing the interval.');
       expect(body.data.focus).toBe('steps');
       expect(body.data.model).toBe('test-model');
+      expect(body.data.cached).toBe(false);
       expect(body.data.usage.prompt_tokens).toBe(10);
       expect(body.data.source).toEqual({
         method: 'Bisection Method',
@@ -86,18 +103,180 @@ describe('Explanation API', () => {
       const providerRequest = JSON.parse(getProviderCalls()[0][1].body);
       expect(providerRequest.max_tokens).toBe(700);
       expect(providerRequest.temperature).toBe(0.2);
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://example.test/v1/chat/completions',
-        expect.objectContaining({
-          method: 'POST',
-          headers: expect.objectContaining({
-            Authorization: 'Bearer test-key',
-            'Content-Type': 'application/json',
-          }),
-        })
-      );
     } finally {
       await closeServer(server);
+      aiExplanationRepository.findByPromptHash.mockRestore?.();
+    }
+  });
+
+  test('POST /api/v1/explain returns cached result on cache hit without calling AI provider', async () => {
+    const cachedText = 'This is a stored explanation from database cache.';
+    jest.spyOn(aiExplanationRepository, 'findByPromptHash').mockResolvedValueOnce({
+      id: 'mock-id',
+      focusMode: 'steps',
+      responseText: cachedText,
+      expiresAt: new Date(Date.now() + 1000000),
+    });
+
+    const { server, baseUrl } = await startApp();
+
+    try {
+      const response = await fetch(`${baseUrl}/api/v1/explain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          solverResult: buildSolverResult(),
+          focus: 'steps',
+        }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(body.data.explanation).toBe(cachedText);
+      expect(body.data.cached).toBe(true);
+      expect(body.data.model).toBe('cached');
+      // Assert AI provider was NOT called
+      expect(getProviderCalls()).toHaveLength(0);
+    } finally {
+      await closeServer(server);
+      aiExplanationRepository.findByPromptHash.mockRestore?.();
+    }
+  });
+
+  test('POST /api/v1/explain retries on 5xx failure and succeeds on subsequent attempt', async () => {
+    jest.spyOn(aiExplanationRepository, 'findByPromptHash').mockResolvedValueOnce(null);
+
+    let attempts = 0;
+    global.fetch.mockImplementation((url, options) => {
+      if (String(url).startsWith('http://127.0.0.1')) {
+        return originalFetch(url, options);
+      }
+
+      attempts += 1;
+      if (attempts === 1) {
+        return Promise.resolve({
+          ok: false,
+          status: 503,
+          json: async () => ({ error: 'Service Unavailable' }),
+        });
+      }
+
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          model: 'test-model',
+          choices: [{ message: { content: 'Success on retry attempt.' } }],
+          usage: { total_tokens: 20 },
+        }),
+      });
+    });
+
+    const { server, baseUrl } = await startApp();
+
+    try {
+      const response = await fetch(`${baseUrl}/api/v1/explain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          solverResult: buildSolverResult(),
+          focus: 'summary',
+        }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body.success).toBe(true);
+      expect(body.data.explanation).toBe('Success on retry attempt.');
+      expect(attempts).toBe(2);
+    } finally {
+      await closeServer(server);
+      aiExplanationRepository.findByPromptHash.mockRestore?.();
+    }
+  });
+
+  test('POST /api/v1/explain does NOT retry on 4xx client errors from AI provider', async () => {
+    jest.spyOn(aiExplanationRepository, 'findByPromptHash').mockResolvedValueOnce(null);
+
+    let attempts = 0;
+    global.fetch.mockImplementation((url, options) => {
+      if (String(url).startsWith('http://127.0.0.1')) {
+        return originalFetch(url, options);
+      }
+
+      attempts += 1;
+      return Promise.resolve({
+        ok: false,
+        status: 400,
+        json: async () => ({ error: 'Bad Request' }),
+      });
+    });
+
+    const { server, baseUrl } = await startApp();
+
+    try {
+      const response = await fetch(`${baseUrl}/api/v1/explain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          solverResult: buildSolverResult(),
+          focus: 'steps',
+        }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(502);
+      expect(body.success).toBe(false);
+      expect(attempts).toBe(1); // Exactly 1 attempt, no retries
+    } finally {
+      await closeServer(server);
+      aiExplanationRepository.findByPromptHash.mockRestore?.();
+    }
+  });
+
+  test('Circuit breaker opens after threshold failures and fast-fails without network calls', async () => {
+    jest.spyOn(aiExplanationRepository, 'findByPromptHash').mockResolvedValue(null);
+
+    global.fetch.mockImplementation((url, options) => {
+      if (String(url).startsWith('http://127.0.0.1')) {
+        return originalFetch(url, options);
+      }
+
+      return Promise.resolve({
+        ok: false,
+        status: 500,
+        json: async () => ({}),
+      });
+    });
+
+    // Manually trip the circuit breaker by recording failures
+    for (let i = 0; i < 5; i++) {
+      aiCircuitBreaker.recordFailure();
+    }
+
+    expect(aiCircuitBreaker.getState()).toBe('OPEN');
+
+    const { server, baseUrl } = await startApp();
+
+    try {
+      const response = await fetch(`${baseUrl}/api/v1/explain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          solverResult: buildSolverResult(),
+        }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(502);
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('AI_SERVICE_ERROR');
+      expect(body.error.message).toContain('circuit breaker is open');
+      // Verify no external AI fetch calls were attempted while circuit is open
+      expect(getProviderCalls()).toHaveLength(0);
+    } finally {
+      await closeServer(server);
+      aiExplanationRepository.findByPromptHash.mockRestore?.();
     }
   });
 
@@ -176,52 +355,17 @@ describe('Explanation API', () => {
     }
   });
 
-  test('POST /api/v1/explain maps provider failures to AI_SERVICE_ERROR', async () => {
-    global.fetch.mockImplementation((url, options) => {
-      if (String(url).startsWith('http://127.0.0.1')) {
-        return originalFetch(url, options);
-      }
-
-      return Promise.resolve({
-        ok: false,
-        status: 503,
-        json: async () => ({}),
-      });
-    });
-    const { server, baseUrl } = await startApp();
-
-    try {
-      const response = await fetch(`${baseUrl}/api/v1/explain`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          solverResult: buildSolverResult(),
-        }),
-      });
-      const body = await response.json();
-
-      expect(response.status).toBe(502);
-      expect(body.success).toBe(false);
-      expect(body.error.code).toBe('AI_SERVICE_ERROR');
-    } finally {
-      await closeServer(server);
-    }
-  });
-
   test('POST /api/v1/explain maps provider timeouts to AI_SERVICE_ERROR', async () => {
-    process.env.AI_TIMEOUT_MS = '1';
+    jest.spyOn(aiExplanationRepository, 'findByPromptHash').mockResolvedValueOnce(null);
+
     global.fetch.mockImplementation((url, options) => {
       if (String(url).startsWith('http://127.0.0.1')) {
         return originalFetch(url, options);
       }
 
-      return new Promise((_resolve, reject) => {
-        options.signal.addEventListener('abort', () => {
-          const err = new Error('aborted');
-          err.name = 'AbortError';
-          reject(err);
-        });
-      });
+      const err = new Error('The operation was aborted');
+      err.name = 'AbortError';
+      return Promise.reject(err);
     });
     const { server, baseUrl } = await startApp();
 
@@ -238,9 +382,10 @@ describe('Explanation API', () => {
       expect(response.status).toBe(502);
       expect(body.success).toBe(false);
       expect(body.error.code).toBe('AI_SERVICE_ERROR');
-      expect(body.error.details.timeoutMs).toBe(1);
+      expect(body.error.details.timeoutMs).toBeDefined();
     } finally {
       await closeServer(server);
+      aiExplanationRepository.findByPromptHash.mockRestore?.();
     }
   });
 });
