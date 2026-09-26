@@ -1,6 +1,7 @@
 'use strict';
 
 const logger = require('../../config/logger');
+const solverRunRepository = require('../../db/repositories/solverRunRepository');
 const { solveBisection } = require('./rootFinding/bisection.service');
 const { solveNewtonRaphson } = require('./rootFinding/newtonRaphson.service');
 const { solveSecant } = require('./rootFinding/secant.service');
@@ -141,17 +142,38 @@ function runRootSolver(method, solver, params, context) {
   return runSolver(method, solver, params, context);
 }
 
-function runSolver(method, solver, params, context) {
+function runSolver(method, solver, params, context = {}) {
   const result = solver(params);
 
   logger.info({
     requestId: context.requestId,
+    userId: context.userId || null,
     method,
     status: result.status,
     executionTimeMs: result.executionTimeMs,
-    iterationCount: result.iterations.length,
-    warningCount: result.warnings.length,
+    iterationCount: Array.isArray(result.iterations) ? result.iterations.length : 0,
+    warningCount: Array.isArray(result.warnings) ? result.warnings.length : 0,
   }, 'Solve completed');
+
+  // Asynchronous non-blocking persistence (Phase 1 & Phase 3 pattern)
+  solverRunRepository
+    .create({
+      userId: context.userId || null,
+      method,
+      inputPayload: params,
+      outputPayload: result,
+    })
+    .catch((err) => {
+      logger.warn(
+        {
+          err: err.message,
+          method,
+          userId: context.userId || null,
+          requestId: context.requestId,
+        },
+        'Non-fatal warning: Failed to persist solver run to database'
+      );
+    });
 
   return result;
 }

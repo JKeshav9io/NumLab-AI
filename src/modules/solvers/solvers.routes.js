@@ -2,9 +2,12 @@
 
 const express = require('express');
 const solversController = require('./solvers.controller');
+const optionalAuthenticate = require('../../common/middleware/optionalAuthenticate');
 const { asyncHandler } = require('../../common/utils');
 
 const router = express.Router();
+
+router.use(optionalAuthenticate);
 
 router.post('/root/bisection', asyncHandler(solversController.solveBisection));
 router.post('/root/newton', asyncHandler(solversController.solveNewtonRaphson));
