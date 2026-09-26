@@ -1,6 +1,19 @@
 'use strict';
 
 describe('Integration API', () => {
+  let server;
+  let baseUrl;
+
+  beforeAll(async () => {
+    const appContext = await startApp();
+    server = appContext.server;
+    baseUrl = appContext.baseUrl;
+  });
+
+  afterAll(async () => {
+    await closeServer(server);
+  });
+
   test.each([
     [
       '/api/v1/solve/integration/trapezoidal',
@@ -51,27 +64,21 @@ describe('Integration API', () => {
       1 / 3,
     ],
   ])('POST %s returns a structured integration result', async (path, requestBody, methodName, integral) => {
-    const { server, baseUrl } = await startApp();
+    const response = await fetch(`${baseUrl}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+    const body = await response.json();
 
-    try {
-      const response = await fetch(`${baseUrl}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-      const body = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(body.success).toBe(true);
-      expect(body.data.method).toBe(methodName);
-      expect(body.data.status).toBe('converged');
-      expect(body.data.finalAnswer.integral).toBeCloseTo(integral, 10);
-      expect(body.data.finalAnswer.errorAvailable).toBe(true);
-      expect(body.data.iterations.length).toBeGreaterThan(0);
-      expect(body.data.graphData).toHaveLength(81);
-    } finally {
-      await closeServer(server);
-    }
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data.method).toBe(methodName);
+    expect(body.data.status).toBe('converged');
+    expect(body.data.finalAnswer.integral).toBeCloseTo(integral, 10);
+    expect(body.data.finalAnswer.errorAvailable).toBe(true);
+    expect(body.data.iterations.length).toBeGreaterThan(0);
+    expect(body.data.graphData).toHaveLength(81);
   });
 
   test.each([
@@ -133,27 +140,20 @@ describe('Integration API', () => {
       },
     ],
   ])('POST integration endpoint validates %s', async (_name, path, requestBody) => {
-    const { server, baseUrl } = await startApp();
+    const response = await fetch(`${baseUrl}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+    const body = await response.json();
 
-    try {
-      const response = await fetch(`${baseUrl}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-      const body = await response.json();
-
-      expect(response.status).toBe(400);
-      expect(body.success).toBe(false);
-      expect(body.error.code).toBe('VALIDATION_ERROR');
-    } finally {
-      await closeServer(server);
-    }
+    expect(response.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 });
 
 async function startApp() {
-  jest.resetModules();
   process.env.NODE_ENV = 'test';
 
   const solverRunRepository = require('../db/repositories/solverRunRepository');

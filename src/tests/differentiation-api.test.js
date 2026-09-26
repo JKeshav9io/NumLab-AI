@@ -1,6 +1,19 @@
 'use strict';
 
 describe('Differentiation API', () => {
+  let server;
+  let baseUrl;
+
+  beforeAll(async () => {
+    const appContext = await startApp();
+    server = appContext.server;
+    baseUrl = appContext.baseUrl;
+  });
+
+  afterAll(async () => {
+    await closeServer(server);
+  });
+
   test.each([
     [
       '/api/v1/solve/differentiation/forward',
@@ -71,51 +84,39 @@ describe('Differentiation API', () => {
       4,
     ],
   ])('POST %s returns a structured differentiation result', async (path, requestBody, methodName, derivative) => {
-    const { server, baseUrl } = await startApp();
+    const response = await fetch(`${baseUrl}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+    const body = await response.json();
 
-    try {
-      const response = await fetch(`${baseUrl}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-      const body = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(body.success).toBe(true);
-      expect(body.data.method).toBe(methodName);
-      expect(body.data.status).toBe('converged');
-      expect(body.data.finalAnswer.derivative).toBeCloseTo(derivative, 6);
-      expect(body.data.finalAnswer.errorAvailable).toBe(true);
-      expect(body.data.iterations.length).toBeGreaterThan(0);
-    } finally {
-      await closeServer(server);
-    }
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data.method).toBe(methodName);
+    expect(body.data.status).toBe('converged');
+    expect(body.data.finalAnswer.derivative).toBeCloseTo(derivative, 6);
+    expect(body.data.finalAnswer.errorAvailable).toBe(true);
+    expect(body.data.iterations.length).toBeGreaterThan(0);
   });
 
   test('Function-based Finite Difference defaults variant to central', async () => {
-    const { server, baseUrl } = await startApp();
+    const response = await fetch(`${baseUrl}/api/v1/solve/differentiation/function-finite-difference`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        equation: 'x^2 + 2*x + 1',
+        targetX: 1,
+        h: 0.001,
+        includeGraphData: false,
+      }),
+    });
+    const body = await response.json();
 
-    try {
-      const response = await fetch(`${baseUrl}/api/v1/solve/differentiation/function-finite-difference`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          equation: 'x^2 + 2*x + 1',
-          targetX: 1,
-          h: 0.001,
-          includeGraphData: false,
-        }),
-      });
-      const body = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(body.success).toBe(true);
-      expect(body.data.input.variant).toBe('central');
-      expect(body.data.graphData).toEqual([]);
-    } finally {
-      await closeServer(server);
-    }
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data.input.variant).toBe('central');
+    expect(body.data.graphData).toEqual([]);
   });
 
   test.each([
@@ -183,50 +184,37 @@ describe('Differentiation API', () => {
       },
     ],
   ])('POST differentiation endpoint validates %s', async (_name, path, requestBody) => {
-    const { server, baseUrl } = await startApp();
+    const response = await fetch(`${baseUrl}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+    const body = await response.json();
 
-    try {
-      const response = await fetch(`${baseUrl}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-      const body = await response.json();
-
-      expect(response.status).toBe(400);
-      expect(body.success).toBe(false);
-      expect(body.error.code).toBe('VALIDATION_ERROR');
-    } finally {
-      await closeServer(server);
-    }
+    expect(response.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 
   test('POST function-based endpoint rejects invalid expressions', async () => {
-    const { server, baseUrl } = await startApp();
+    const response = await fetch(`${baseUrl}/api/v1/solve/differentiation/function-finite-difference`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        equation: 'x^2 +',
+        targetX: 1,
+        h: 0.001,
+      }),
+    });
+    const body = await response.json();
 
-    try {
-      const response = await fetch(`${baseUrl}/api/v1/solve/differentiation/function-finite-difference`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          equation: 'x^2 +',
-          targetX: 1,
-          h: 0.001,
-        }),
-      });
-      const body = await response.json();
-
-      expect(response.status).toBe(400);
-      expect(body.success).toBe(false);
-      expect(body.error.code).toBe('INVALID_EXPRESSION');
-    } finally {
-      await closeServer(server);
-    }
+    expect(response.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('INVALID_EXPRESSION');
   });
 });
 
 async function startApp() {
-  jest.resetModules();
   process.env.NODE_ENV = 'test';
 
   const solverRunRepository = require('../db/repositories/solverRunRepository');

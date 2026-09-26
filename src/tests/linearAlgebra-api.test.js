@@ -8,6 +8,19 @@ const matrix = [
 const constants = [6, 25, -11];
 
 describe('Linear algebra API', () => {
+  let server;
+  let baseUrl;
+
+  beforeAll(async () => {
+    const appContext = await startApp();
+    server = appContext.server;
+    baseUrl = appContext.baseUrl;
+  });
+
+  afterAll(async () => {
+    await closeServer(server);
+  });
+
   test.each([
     [
       '/api/v1/solve/linear/gauss-elimination',
@@ -37,54 +50,41 @@ describe('Linear algebra API', () => {
       'Gauss-Seidel Method',
     ],
   ])('POST %s returns a structured solution', async (path, requestBody, methodName) => {
-    const { server, baseUrl } = await startApp();
+    const response = await fetch(`${baseUrl}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody),
+    });
+    const body = await response.json();
 
-    try {
-      const response = await fetch(`${baseUrl}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-      const body = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(body.success).toBe(true);
-      expect(body.data.method).toBe(methodName);
-      expect(body.data.status).toBe('converged');
-      expect(body.data.finalAnswer.solution).toHaveLength(3);
-    } finally {
-      await closeServer(server);
-    }
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.data.method).toBe(methodName);
+    expect(body.data.status).toBe('converged');
+    expect(body.data.finalAnswer.solution).toHaveLength(3);
   });
 
   test('POST /api/v1/solve/linear/gauss-elimination validates matrix dimensions', async () => {
-    const { server, baseUrl } = await startApp();
+    const response = await fetch(`${baseUrl}/api/v1/solve/linear/gauss-elimination`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        matrix: [
+          [1, 2],
+          [3],
+        ],
+        constants: [1, 2],
+      }),
+    });
+    const body = await response.json();
 
-    try {
-      const response = await fetch(`${baseUrl}/api/v1/solve/linear/gauss-elimination`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          matrix: [
-            [1, 2],
-            [3],
-          ],
-          constants: [1, 2],
-        }),
-      });
-      const body = await response.json();
-
-      expect(response.status).toBe(400);
-      expect(body.success).toBe(false);
-      expect(body.error.code).toBe('VALIDATION_ERROR');
-    } finally {
-      await closeServer(server);
-    }
+    expect(response.status).toBe(400);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('VALIDATION_ERROR');
   });
 });
 
 async function startApp() {
-  jest.resetModules();
   process.env.NODE_ENV = 'test';
 
   const solverRunRepository = require('../db/repositories/solverRunRepository');
