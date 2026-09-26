@@ -5,10 +5,7 @@ require('dotenv').config({ quiet: true });
 const required = [
   'NODE_ENV',
   'PORT',
-  'DB_HOST',
-  'DB_NAME',
-  'DB_USER',
-  'DB_PASSWORD',
+  'DATABASE_URL',
   'JWT_SECRET',
   'AI_API_KEY',
 ];
@@ -18,6 +15,16 @@ for (const key of required) {
     console.error(`Missing required environment variable: ${key}`);
     process.exit(1);
   }
+}
+
+// Security guardrail: Warn if using default or weak secret
+if (
+  process.env.JWT_SECRET === 'change-this-to-a-long-random-string' ||
+  process.env.JWT_SECRET.length < 32
+) {
+  console.warn(
+    '[config] ⚠️  SECURITY WARNING: JWT_SECRET appears to use a default placeholder or is under 32 characters. Ensure a cryptographically secure 256-bit random secret is set in production.'
+  );
 }
 
 function parseIntegerEnv(key, fallback) {
@@ -47,13 +54,9 @@ module.exports = {
   NODE_ENV: process.env.NODE_ENV,
   PORT: parseIntegerEnv('PORT'),
 
-  DB_HOST: process.env.DB_HOST,
-  DB_PORT: parseIntegerEnv('DB_PORT', '5432'),
-  DB_NAME: process.env.DB_NAME,
-  DB_USER: process.env.DB_USER,
-  DB_PASSWORD: process.env.DB_PASSWORD,
+  DATABASE_URL: process.env.DATABASE_URL,
 
-  JWT_SECRET: process.env.JWT_SECRET,
+  JWT_SECRET: process.env.JWT_SECRET || null,
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
 
   AI_API_KEY: process.env.AI_API_KEY,
