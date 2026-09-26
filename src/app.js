@@ -4,17 +4,22 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
+const compression = require('compression');
 const errorHandler = require('./common/middleware/errorHandler');
 const requestLogger = require('./common/middleware/requestLogger');
-const { explainLimiter, solveLimiter } = require('./common/middleware/rateLimiter');
+const { explainLimiter, solveLimiter, reportLimiter } = require('./common/middleware/rateLimiter');
 const explanationsRoutes = require('./modules/explanations/explanations.routes');
 const solversRoutes = require('./modules/solvers/solvers.routes');
+const authRoutes = require('./modules/auth/auth.routes');
+const usersRoutes = require('./modules/users/users.routes');
+const reportsRoutes = require('./modules/reports/reports.routes');
 
 function createApp() {
   const app = express();
 
   app.use(helmet());
   app.use(cors());
+  app.use(compression());
   app.use((req, _res, next) => {
     req.id = uuidv4();
     next();
@@ -26,8 +31,14 @@ function createApp() {
     res.json({ status: 'ok' });
   });
 
+  // Public numerical solver & explanation routes (rate-limited, no auth required)
   app.use('/api/v1/solve', solveLimiter, solversRoutes);
   app.use('/api/v1/explain', explainLimiter, explanationsRoutes);
+
+  // Authentication, user, & report routes
+  app.use('/api/v1/auth', authRoutes);
+  app.use('/api/v1/users', usersRoutes);
+  app.use('/api/v1/reports', reportLimiter, reportsRoutes);
 
   app.use(errorHandler);
 
@@ -35,3 +46,4 @@ function createApp() {
 }
 
 module.exports = createApp;
+
