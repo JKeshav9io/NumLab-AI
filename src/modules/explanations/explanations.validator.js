@@ -1,7 +1,7 @@
 'use strict';
 
 const Joi = require('joi');
-const { AppError, errorCodes } = require('../../common/errors');
+const { validate } = require('../../common/validators');
 
 const FOCUS_VALUES = ['summary', 'steps', 'warnings', 'lab-report'];
 const MAX_EXPLAIN_ITERATIONS = 200;
@@ -33,26 +33,7 @@ const explainSchema = Joi.object({
 });
 
 function validateExplainRequest(body) {
-  const { error, value } = explainSchema.validate(body, {
-    abortEarly: false,
-    stripUnknown: true,
-  });
-
-  if (error) {
-    throw new AppError(
-      'Validation failed',
-      400,
-      errorCodes.VALIDATION_ERROR,
-      {
-        fields: error.details.map((detail) => ({
-          field: detail.path.join('.') || 'body',
-          message: detail.message,
-        })),
-      }
-    );
-  }
-
-  return value;
+  return validate(explainSchema, body);
 }
 
 function validateGraphDataSize(value, helpers) {

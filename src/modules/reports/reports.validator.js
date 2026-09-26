@@ -1,7 +1,7 @@
 'use strict';
 
 const Joi = require('joi');
-const { AppError, errorCodes } = require('../../common/errors');
+const { validate } = require('../../common/validators');
 
 const reportParamSchema = Joi.object({
   runId: Joi.string().guid().required(),
@@ -14,21 +14,11 @@ const reportParamSchema = Joi.object({
  * @returns {Object} Validated params
  */
 function validateReportParam(params) {
-  const { value, error } = reportParamSchema.validate(params, {
-    convert: true,
-    stripUnknown: true,
+  return validate(reportParamSchema, params, {
+    message: 'Invalid solver run ID parameter',
+    useDetailsList: true,
+    joiOptions: { convert: true },
   });
-
-  if (error) {
-    throw new AppError(
-      'Invalid solver run ID parameter',
-      400,
-      errorCodes.VALIDATION_ERROR,
-      { details: error.details.map((d) => d.message) }
-    );
-  }
-
-  return value;
 }
 
 module.exports = {
