@@ -14,16 +14,21 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Runtime data
+# Runtime data & temp files
 pids/
 *.pid
 *.seed
 *.pid.lock
+scratch/
+tmp/
+temp/
+reports/
 
 # Coverage and build output
 coverage/
 dist/
 build/
+/src/generated/prisma
 
 # OS and editor files
 .DS_Store
@@ -31,24 +36,21 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Generated reports and temporary files
-reports/
-tmp/
-temp/
-
-# Local AI assistant / Graphify / Codex files
-.agents/
-.codex/
-AGENTS.md
-graphify-out/
-
-# AI / planning / local instruction docs
+# Local session memory and tooling (not tracked in repo)
+MEMORY.md
+memory.md
 AGENTS.md
 AI_INSTRUCTIONS.md
-PROJECT_BLUEPRINT.md
-ARCHITECTURE.md
-API_SPEC.md
-
-# Local AI/tooling configs
 .agents/
 .codex/
+.claude/
+.windsurf/
+graphify-out/
+skills-lock.json
+resume_analysis/
+
+# Local reference and planning documentation (not tracked in repo)
+API_SPEC.md
+ARCHITECTURE.md
+PROJECT_BLUEPRINT.md
+FRONTEND_PLAN.md
