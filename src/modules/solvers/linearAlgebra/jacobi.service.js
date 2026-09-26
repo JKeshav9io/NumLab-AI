@@ -46,6 +46,8 @@ function solveJacobi(params) {
     warnings.push('Matrix is not diagonally dominant; convergence is not guaranteed');
   }
 
+const DIVERGENCE_THRESHOLD = 1e15;
+
   let current = initialGuess ? initialGuess.slice() : Array(n).fill(0);
 
   for (let iteration = 1; iteration <= maxIterations; iteration++) {
@@ -68,6 +70,37 @@ function solveJacobi(params) {
     }
 
     const error = maxAbsDifference(next, current);
+    const isDiverged = next.some((val) => !Number.isFinite(val) || Math.abs(val) > DIVERGENCE_THRESHOLD)
+      || !Number.isFinite(error)
+      || error > DIVERGENCE_THRESHOLD;
+
+    if (isDiverged) {
+      warnings.push('Method diverged: iterates exceeded numerical bounds or became non-finite');
+      iterations.push({
+        iteration,
+        previous: roundVector(current),
+        current: next.map((val) => (Number.isFinite(val) ? round(val) : null)),
+        formulas,
+        error: Number.isFinite(error) ? round(error) : null,
+        tolerance,
+        decision: 'Divergence detected: values exceeded threshold or became non-finite, stop',
+      });
+
+      return buildIterativeResult({
+        method: 'Jacobi Method',
+        status: 'diverged',
+        input,
+        iterations,
+        solution: current,
+        matrix,
+        constants,
+        includeExplanation,
+        warnings,
+        reason: 'Computation diverged',
+        start,
+      });
+    }
+
     const toleranceReached = error <= tolerance;
 
     iterations.push({

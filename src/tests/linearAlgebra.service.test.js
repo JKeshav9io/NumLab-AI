@@ -105,4 +105,51 @@ describe('Linear algebra services', () => {
 
     expect(result.warnings).toContain('Matrix is not diagonally dominant; convergence is not guaranteed');
   });
+
+  test('Jacobi detects divergence and exits early with status diverged', () => {
+    const result = solveJacobi({
+      matrix: [
+        [1, 2],
+        [3, 1],
+      ],
+      constants: [1, 1],
+      initialGuess: [0, 0],
+      tolerance: 0.0001,
+      maxIterations: 100,
+      includeExplanation: true,
+    });
+
+    expect(result.status).toBe('diverged');
+    expect(result.finalAnswer.converged).toBe(false);
+    expect(result.iterations.length).toBeLessThan(100);
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Method diverged'),
+      ])
+    );
+  });
+
+  test('Gauss-Seidel detects divergence and exits early with status diverged', () => {
+    const result = solveGaussSeidel({
+      matrix: [
+        [1, 2],
+        [3, 1],
+      ],
+      constants: [1, 1],
+      initialGuess: [0, 0],
+      tolerance: 0.0001,
+      maxIterations: 100,
+      includeExplanation: true,
+    });
+
+    expect(result.status).toBe('diverged');
+    expect(result.finalAnswer.converged).toBe(false);
+    expect(result.iterations.length).toBeLessThan(100);
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('Method diverged'),
+      ])
+    );
+  });
 });
+
