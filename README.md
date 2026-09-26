@@ -1,511 +1,240 @@
 # NumLab AI Backend
 
-NumLab AI Backend is a JavaScript Node.js/Express API for a numerical methods learning platform. It runs deterministic scientific computing solvers and returns structured results for students, including iteration data, final answers, warnings, optional graph data, and optional explanation text.
+NumLab AI Backend is a production-ready Node.js/Express 5 API for a numerical scientific computing and educational platform. It provides 27 deterministic numerical solvers, secure JWT authentication with refresh token rotation, non-blocking user history persistence, resilient AI-powered pedagogical explanations with response caching, and downloadable PDF lab reports with vector charts.
 
-The project is focused on making numerical methods easier to inspect, visualize, and learn from step by step.
+---
 
 ## Features
 
-- Express REST API.
-- Health check endpoint.
-- Root-finding solvers:
-  - Bisection
-  - Newton-Raphson
-  - Secant
-  - Regula Falsi
-- Linear algebra solvers:
-  - Gauss Elimination
-  - Jacobi
-  - Gauss-Seidel
-- Interpolation solvers:
-  - Lagrange Interpolation
-  - Newton Divided Difference
-  - Newton Forward Interpolation
-  - Newton Backward Interpolation
-  - Central Difference Interpolation
-  - Natural Cubic Spline
-  - Quadratic Interpolation
-- ODE solvers:
-  - Euler Method
-  - Heun / Improved Euler Method
-  - RK4 Method
-  - Milne Predictor-Corrector Method
-- Numerical integration solvers:
-  - Trapezoidal Rule
-  - Simpson's 1/3 Rule
-  - Simpson's 3/8 Rule
-  - Gauss-Legendre Quadrature
-- Numerical differentiation solvers:
-  - Forward Difference
-  - Backward Difference
-  - Central Difference
-  - Lagrange Differentiation
-  - Function-based Finite Difference
-- Joi request validation.
-- Structured success and error responses.
-- Stateless AI explanation endpoint for already-computed solver results.
-- Request logging with pino.
-- Rate limiting for solver and AI explanation routes.
-- Safe math expression parsing with mathjs.
-- Jest test suite.
+- **27 Numerical Solvers**: Pure, deterministic mathematical computation engines across 6 domains:
+  - **Root-Finding**: Bisection, Newton-Raphson, Secant, Regula Falsi.
+  - **Linear Algebra**: Gaussian Elimination, Jacobi, Gauss-Seidel.
+  - **Interpolation**: Lagrange, Newton Divided Difference, Newton Forward/Backward, Central Difference (Stirling/Bessel/Everett), Natural Cubic Spline, Quadratic.
+  - **Ordinary Differential Equations (ODE)**: Euler, Heun (Improved Euler), 4th-Order Runge-Kutta (RK4), Milne Predictor-Corrector.
+  - **Numerical Integration**: Trapezoidal Rule, Simpson's 1/3 Rule, Simpson's 3/8 Rule, Gauss-Legendre Quadrature.
+  - **Numerical Differentiation**: Forward Difference, Backward Difference, Central Difference, Lagrange Differentiation, Function-Based Finite Difference.
+- **Authentication & Security**:
+  - Dual-token JWT authentication (short-lived 15m access token, stateful 7d refresh token).
+  - Single-use refresh token rotation (RTR) with token hash revocation tracking.
+  - Native `bcrypt` password hashing (cost factor 12) and anti-enumeration generic login responses.
+- **Solve History & Persistence**:
+  - Optional authentication on all solver endpoints: anonymous solving remains 100% public while authenticated runs are persisted in PostgreSQL.
+  - Non-blocking asynchronous database writes that never delay mathematical calculation responses.
+  - Paginated calculation history retrieval (`/api/v1/users/me/history`) and single run lookup with user ownership enforcement.
+- **AI Pedagogical Explanations**:
+  - Explains already-computed numerical results step by step without hallucinating math calculations.
+  - Deterministic canonical SHA-256 prompt hashing and PostgreSQL response caching with TTL.
+  - In-memory circuit breaker (fast-fails in <1ms during provider outages) and exponential backoff retries for transient errors.
+  - Tiered cost-budget rate limiting and prompt injection defenses.
+- **PDF Lab Report Generation**:
+  - On-demand binary PDF generation (`pdfkit`) with structured problem inputs, convergence summaries, iteration tables, and AI explanations.
+  - 2D vector coordinate plotting for ODE trajectories, interpolation polynomials, and integration areas without heavy external browser dependencies.
+- **Performance & Reliability**:
+  - Gzip payload compression for responses exceeding 1 KB (~75–98% bandwidth reduction).
+  - Multi-tier rate limiting (`express-rate-limit`) preventing brute force and API abuse.
+  - Structured request logging with `pino` and unique request ID tracing.
+  - PostgreSQL connection pool tuning for serverless transaction poolers (Neon).
+  - 100% automated test coverage (170 tests across 23 test suites).
+
+---
 
 ## Tech Stack
 
-- Node.js (CommonJS)
-- Express 5
-- PostgreSQL (Neon Serverless)
-- Prisma 7 ORM (`@prisma/client`, `@prisma/adapter-pg`)
-- mathjs
-- Joi
-- pino
-- Jest
-- helmet
-- cors
-- express-rate-limit
-- dotenv
+- **Runtime & Framework**: Node.js, Express 5
+- **Database & ORM**: PostgreSQL (Neon Serverless), Prisma 7 ORM (`@prisma/client`, `@prisma/adapter-pg`, `pg`)
+- **Authentication & Security**: `jsonwebtoken`, `bcrypt`, `helmet`, `cors`, `express-rate-limit`
+- **Math & Computing**: `mathjs`
+- **Validation**: `joi`
+- **Reporting**: `pdfkit`
+- **Performance & Logging**: `compression`, `pino`, `pino-pretty`
+- **Testing**: `jest`, `supertest`
+
+---
 
 ## Project Structure
 
 ```text
 numlab-backend/
-  src/
-    app.js
-    server.js
-    config/
-      env.js
-      logger.js
-    common/
-      errors/
-      middleware/
-      utils/
-      validators/
-      types/
-    modules/
-      auth/
-      explanations/
-      problems/
-      reports/
-      solvers/
-        solvers.routes.js
-        solvers.controller.js
-        solvers.service.js
-        solvers.validator.js
-        rootFinding/
-        linearAlgebra/
-        interpolation/
-        ode/
-        integration/
-        differentiation/
-      users/
-    tests/
-  .env.example
-  package.json
+├── prisma/
+│   ├── schema.prisma              # Data models (User, SolverRun, AiExplanation, RefreshToken)
+│   └── migrations/                # Database migrations
+├── src/
+│   ├── server.js                  # Entry point, DB healthcheck, graceful shutdown
+│   ├── app.js                     # Express app factory, middleware, route mounting
+│   ├── config/                    # Environment variable validation & Pino logger
+│   ├── common/                    # Shared errors, middleware (auth, rate limits), utilities
+│   ├── db/
+│   │   ├── index.js               # Prisma client singleton & connection pooling
+│   │   └── repositories/          # User, SolverRun, AiExplanation, RefreshToken repositories
+│   ├── modules/
+│   │   ├── auth/                  # Authentication routes, controllers, password & token logic
+│   │   ├── users/                 # User profile & paginated history routes/controllers
+│   │   ├── solvers/               # 27 numerical solvers, validators, and orchestration
+│   │   │   ├── rootFinding/
+│   │   │   ├── linearAlgebra/
+│   │   │   ├── interpolation/
+│   │   │   ├── ode/
+│   │   │   ├── integration/
+│   │   │   └── differentiation/
+│   │   ├── explanations/          # AI explanation service, prompt builder, circuit breaker
+│   │   └── reports/               # PDF report generation, vector layout template, streaming
+│   └── tests/                     # 23 Jest test suites (unit & integration)
+├── .env.example                   # Environment variable template
+└── package.json
 ```
 
-Key files and folders:
-
-- `src/app.js`: Express app factory and middleware setup.
-- `src/server.js`: Starts the HTTP server.
-- `src/config`: Environment validation and logger setup.
-- `src/common`: Shared errors, middleware, and utilities.
-- `src/modules/solvers`: Solver routes, controllers, service orchestration, and validation.
-- `src/modules/solvers/rootFinding`: Root-finding solver implementations.
-- `src/modules/solvers/linearAlgebra`: Linear algebra solver implementations.
-- `src/modules/solvers/interpolation`: Interpolation solver implementations.
-- `src/modules/solvers/ode`: ODE solver implementations.
-- `src/modules/solvers/integration`: Numerical integration solver implementations.
-- `src/modules/solvers/differentiation`: Numerical differentiation solver implementations.
-- `src/tests`: Jest tests for configuration, API routes, and solver services.
-
-## Database Setup (Neon & Prisma)
-
-1. Create a PostgreSQL database on [Neon](https://neon.tech).
-2. Copy your pooled connection string into `.env`:
-   ```env
-   DATABASE_URL="postgresql://user:password@ep-sample-123456.us-east-2.aws.neon.tech/neondb?sslmode=require"
-   ```
-3. Generate the Prisma Client and apply migrations:
-   ```bash
-   npm run prisma:generate
-   npm run db:migrate
-   ```
-4. (Optional) Open Prisma Studio to inspect records visually:
-   ```bash
-   npm run prisma:studio
-   ```
+---
 
 ## Getting Started
 
-Clone the repository:
+### 1. Prerequisites
+- Node.js (v18 or higher recommended)
+- PostgreSQL database (e.g. [Neon](https://neon.tech))
 
+### 2. Clone & Install
 ```bash
-git clone <repository-url>
-cd numlab-backend
-```
-
-Install dependencies:
-
-```bash
+git clone https://github.com/JKeshav9io/NumLab-AI.git
+cd NumLab-AI
 npm install
 ```
 
-Create an environment file:
-
+### 3. Configure Environment Variables
+Copy `.env.example` to `.env`:
 ```bash
 cp .env.example .env
 ```
+*(On Windows Command Prompt: `copy .env.example .env`)*
 
-On Windows:
+Configure the following variables in `.env`:
+- `DATABASE_URL`: PostgreSQL connection string (with SSL mode, e.g. Neon pooled URL).
+- `JWT_SECRET`: A secure random string (at least 32 characters) for signing access tokens.
+- `AI_API_KEY`: API key for OpenAI or OpenAI-compatible LLM provider.
+- `AI_MODEL`: Model identifier (e.g. `gpt-4o-mini`, `deepseek-chat`).
+- `AI_BASE_URL`: API base URL (e.g. `https://api.openai.com/v1`).
 
-```cmd
-copy .env.example .env
-```
-
-Run the development server:
-
+### 4. Database Setup & Migrations
+Generate the Prisma Client and apply migrations to your database:
 ```bash
-npm run dev
+npm run prisma:generate
+npm run db:migrate
 ```
 
-Run tests:
+*(Optional: Run `npm run prisma:studio` to visually inspect database tables in your browser).*
 
+### 5. Run the Application
+- **Development (with hot reload)**:
+  ```bash
+  npm run dev
+  ```
+- **Production**:
+  ```bash
+  npm start
+  ```
+
+---
+
+## Testing
+
+Run the full automated test suite:
 ```bash
 npm test
 ```
+The test suite executes 23 test suites and 170 unit and integration tests covering math solvers, database repositories, authentication, AI circuit breakers, history retrieval, and PDF report compilation.
 
-## Environment Variables
+---
 
-Environment variables are documented in `.env.example`. Create a local `.env` file before running the server.
+## API Overview
 
-Do not commit real secrets or production credentials.
+All API endpoints are mounted under `/api/v1` (with the exception of `/health`).
 
-AI explanation settings:
+### 1. Health Check
+- `GET /health` — Service health status (Public)
 
-- `AI_API_KEY`: provider API key.
-- `AI_MODEL`: OpenAI-compatible chat model name.
-- `AI_BASE_URL`: provider base URL, for example `https://api.openai.com/v1`.
-- `AI_MAX_TOKENS`: maximum provider response tokens for explanation text. Defaults to `700`.
-- `AI_TIMEOUT_MS`: AI provider request timeout in milliseconds. Defaults to `15000`.
+### 2. Authentication (`/api/v1/auth`)
+- `POST /api/v1/auth/register` — Register a new student account (`email`, `password`)
+- `POST /api/v1/auth/login` — Authenticate and receive JWT access & refresh tokens
+- `POST /api/v1/auth/refresh` — Single-use refresh token rotation
+- `POST /api/v1/auth/logout` — Revoke single refresh token session
+- `POST /api/v1/auth/logout-all` — Revoke all active sessions for authenticated user (Protected)
 
-## API Endpoints
+### 3. Users & Solve History (`/api/v1/users`)
+- `GET /api/v1/users/me` — Get authenticated user profile (Protected)
+- `GET /api/v1/users/me/history` — Paginated history of past solver runs (`limit`, `offset`) (Protected)
+- `GET /api/v1/users/me/history/:runId` — Get single solver run by UUID with ownership verification (Protected)
 
-```text
-GET  /health
+### 4. Numerical Solvers (`/api/v1/solve`)
+All 27 solver endpoints are **public** (no login required), with **optional authentication** (attaches run to user history if Bearer token is provided).
 
-POST /api/v1/solve/root/bisection
-POST /api/v1/solve/root/newton
-POST /api/v1/solve/root/secant
-POST /api/v1/solve/root/regula-falsi
+- **Root-Finding**:
+  - `POST /api/v1/solve/root/bisection`
+  - `POST /api/v1/solve/root/newton`
+  - `POST /api/v1/solve/root/secant`
+  - `POST /api/v1/solve/root/regula-falsi`
+- **Linear Algebra**:
+  - `POST /api/v1/solve/linear/gauss-elimination`
+  - `POST /api/v1/solve/linear/jacobi`
+  - `POST /api/v1/solve/linear/gauss-seidel`
+- **Interpolation**:
+  - `POST /api/v1/solve/interpolation/lagrange`
+  - `POST /api/v1/solve/interpolation/newton-divided-difference`
+  - `POST /api/v1/solve/interpolation/newton-forward`
+  - `POST /api/v1/solve/interpolation/newton-backward`
+  - `POST /api/v1/solve/interpolation/central-difference`
+  - `POST /api/v1/solve/interpolation/natural-cubic-spline`
+  - `POST /api/v1/solve/interpolation/quadratic`
+- **Ordinary Differential Equations (ODE)**:
+  - `POST /api/v1/solve/ode/euler`
+  - `POST /api/v1/solve/ode/heun`
+  - `POST /api/v1/solve/ode/rk4`
+  - `POST /api/v1/solve/ode/milne`
+- **Numerical Integration**:
+  - `POST /api/v1/solve/integration/trapezoidal`
+  - `POST /api/v1/solve/integration/simpson-13`
+  - `POST /api/v1/solve/integration/simpson-38`
+  - `POST /api/v1/solve/integration/gauss-legendre`
+- **Numerical Differentiation**:
+  - `POST /api/v1/solve/differentiation/forward`
+  - `POST /api/v1/solve/differentiation/backward`
+  - `POST /api/v1/solve/differentiation/central`
+  - `POST /api/v1/solve/differentiation/lagrange`
+  - `POST /api/v1/solve/differentiation/function-finite-difference`
 
-POST /api/v1/solve/linear/gauss-elimination
-POST /api/v1/solve/linear/jacobi
-POST /api/v1/solve/linear/gauss-seidel
+### 5. AI Pedagogical Explanations (`/api/v1/explain`)
+- `POST /api/v1/explain` — Generates or returns cached step-by-step explanations for solver results (`focus`: `summary` | `steps` | `warnings` | `lab-report`).
 
-POST /api/v1/solve/interpolation/lagrange
-POST /api/v1/solve/interpolation/newton-divided-difference
-POST /api/v1/solve/interpolation/newton-forward
-POST /api/v1/solve/interpolation/newton-backward
-POST /api/v1/solve/interpolation/central-difference
-POST /api/v1/solve/interpolation/natural-cubic-spline
-POST /api/v1/solve/interpolation/quadratic
+### 6. PDF Lab Reports (`/api/v1/reports`)
+- `POST /api/v1/reports/:runId` — Generates and streams a downloadable binary PDF report with vector charts (Protected).
 
-POST /api/v1/solve/ode/euler
-POST /api/v1/solve/ode/heun
-POST /api/v1/solve/ode/rk4
-POST /api/v1/solve/ode/milne
+---
 
-POST /api/v1/solve/integration/trapezoidal
-POST /api/v1/solve/integration/simpson-13
-POST /api/v1/solve/integration/simpson-38
-POST /api/v1/solve/integration/gauss-legendre
+## Response Envelope Standard
 
-POST /api/v1/solve/differentiation/forward
-POST /api/v1/solve/differentiation/backward
-POST /api/v1/solve/differentiation/central
-POST /api/v1/solve/differentiation/lagrange
-POST /api/v1/solve/differentiation/function-finite-difference
-
-POST /api/v1/explain
-```
-
-## Example Requests
-
-### Bisection
-
-```json
-{
-  "equation": "x^3 - x - 2",
-  "lowerBound": 1,
-  "upperBound": 2,
-  "tolerance": 0.0001,
-  "maxIterations": 100,
-  "includeExplanation": true,
-  "includeGraphData": true
-}
-```
-
-### Newton-Raphson
-
-```json
-{
-  "equation": "x^3 - x - 2",
-  "derivativeEquation": "3*x^2 - 1",
-  "initialGuess": 1.5,
-  "tolerance": 0.0001,
-  "maxIterations": 100,
-  "includeExplanation": true,
-  "includeGraphData": true
-}
-```
-
-### Gauss-Seidel
-
-```json
-{
-  "matrix": [
-    [10, -1, 2],
-    [-1, 11, -1],
-    [2, -1, 10]
-  ],
-  "constants": [6, 25, -11],
-  "initialGuess": [0, 0, 0],
-  "tolerance": 0.0001,
-  "maxIterations": 100,
-  "includeExplanation": true
-}
-```
-
-### Lagrange Interpolation
-
-```json
-{
-  "points": [
-    { "x": 0, "y": 1 },
-    { "x": 1, "y": 3 },
-    { "x": 2, "y": 2 }
-  ],
-  "targetX": 1.5,
-  "includeExplanation": true,
-  "includeGraphData": true
-}
-```
-
-### Newton Forward Interpolation
-
-```json
-{
-  "points": [
-    { "x": 0, "y": 1 },
-    { "x": 1, "y": 2 },
-    { "x": 2, "y": 5 },
-    { "x": 3, "y": 10 }
-  ],
-  "targetX": 0.5,
-  "includeExplanation": true,
-  "includeGraphData": true
-}
-```
-
-### Newton Backward Interpolation
-
-```json
-{
-  "points": [
-    { "x": 0, "y": 1 },
-    { "x": 1, "y": 2 },
-    { "x": 2, "y": 5 },
-    { "x": 3, "y": 10 }
-  ],
-  "targetX": 2.5,
-  "includeExplanation": true,
-  "includeGraphData": true
-}
-```
-
-### Central Difference Interpolation
-
-```json
-{
-  "points": [
-    { "x": 0, "y": 1 },
-    { "x": 1, "y": 2 },
-    { "x": 2, "y": 5 },
-    { "x": 3, "y": 10 },
-    { "x": 4, "y": 17 }
-  ],
-  "targetX": 2.25,
-  "variant": "gauss-forward",
-  "includeExplanation": true,
-  "includeGraphData": true
-}
-```
-
-### ODE Solvers
-
-```json
-{
-  "equation": "x + y",
-  "x0": 0,
-  "y0": 1,
-  "h": 0.1,
-  "xn": 1,
-  "includeExplanation": true,
-  "includeGraphData": true
-}
-```
-
-You can use `steps` instead of `xn`:
-
-```json
-{
-  "equation": "x + y",
-  "x0": 0,
-  "y0": 1,
-  "h": 0.1,
-  "steps": 10,
-  "includeExplanation": true,
-  "includeGraphData": true
-}
-```
-
-### Numerical Differentiation
-
-Tabular finite-difference and Lagrange differentiation endpoints use points:
-
-```json
-{
-  "points": [
-    { "x": 0, "y": 1 },
-    { "x": 1, "y": 4 },
-    { "x": 2, "y": 9 }
-  ],
-  "targetX": 1,
-  "exactDerivative": 4,
-  "includeExplanation": true,
-  "includeGraphData": true
-}
-```
-
-Function-based finite difference uses an equation and spacing:
-
-```json
-{
-  "equation": "x^2 + 2*x + 1",
-  "targetX": 1,
-  "h": 0.001,
-  "variant": "central",
-  "exactDerivative": 4,
-  "includeExplanation": true,
-  "includeGraphData": true
-}
-```
-
-### Numerical Integration
-
-Composite Trapezoidal, Simpson's 1/3, and Simpson's 3/8 rules use `subintervals`:
-
-```json
-{
-  "equation": "x^2",
-  "lowerBound": 0,
-  "upperBound": 1,
-  "subintervals": 6,
-  "exactValue": 0.3333333333,
-  "includeExplanation": true,
-  "includeGraphData": true
-}
-```
-
-Gauss-Legendre Quadrature uses `points` from `2` through `5`:
-
-```json
-{
-  "equation": "x^2",
-  "lowerBound": 0,
-  "upperBound": 1,
-  "points": 3,
-  "exactValue": 0.3333333333,
-  "includeExplanation": true,
-  "includeGraphData": true
-}
-```
-
-### AI Explanation
-
-The endpoint is stateless and explains only an already-computed solver result. It is protected by the `explainLimiter`, uses `AI_MAX_TOKENS` for the provider response cap, and times out provider calls after `AI_TIMEOUT_MS`.
-
-```json
-{
-  "solverResult": {
-    "method": "Bisection Method",
-    "status": "converged",
-    "input": {},
-    "iterations": [],
-    "finalAnswer": {
-      "root": 2,
-      "converged": true
-    },
-    "warnings": [],
-    "executionTimeMs": 2
-  },
-  "focus": "steps",
-  "includeGraphSummary": true
-}
-```
-
-## Response Format
-
-Success responses use this envelope:
-
+### Success (`200 OK` / `201 Created`):
 ```json
 {
   "success": true,
-  "data": {
-    "method": "Bisection Method",
-    "status": "converged",
-    "input": {},
-    "iterations": [],
-    "finalAnswer": {},
-    "explanation": null,
-    "graphData": [],
-    "warnings": [],
-    "executionTimeMs": 2
-  },
+  "data": { ... },
   "meta": {
-    "requestId": "request-id",
-    "timestamp": "2026-05-26T00:00:00.000Z"
+    "requestId": "uuid",
+    "timestamp": "2026-09-26T20:00:00.000Z"
   }
 }
 ```
 
-Error responses use this envelope:
-
+### Error (`4xx` / `5xx`):
 ```json
 {
   "success": false,
   "error": {
     "code": "VALIDATION_ERROR",
     "message": "Validation failed",
-    "details": {}
+    "details": { ... }
   }
 }
 ```
 
-## Current Status
+---
 
-- Implemented solver APIs for root finding, linear algebra, interpolation, ODE initial value problems, numerical integration, and numerical differentiation.
-- Implemented stateless AI explanations for already-computed solver results.
-- Other modules are planned but not implemented yet.
+## License
 
-## Planned Improvements
-
-- PDF reports.
-- Saved history.
-- Authentication.
-
-## Safety And Numerical Integrity
-
-- Solvers are deterministic and run in backend code.
-- mathjs is used for expression parsing.
-- `eval()` and `new Function()` should not be used for math evaluation.
-- AI explanations only explain computed results and must not calculate numerical answers.
+ISC
