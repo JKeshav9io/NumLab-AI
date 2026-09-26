@@ -51,9 +51,10 @@ The project is focused on making numerical methods easier to inspect, visualize,
 
 ## Tech Stack
 
-- Node.js
-- JavaScript
-- Express
+- Node.js (CommonJS)
+- Express 5
+- PostgreSQL (Neon Serverless)
+- Prisma 7 ORM (`@prisma/client`, `@prisma/adapter-pg`)
 - mathjs
 - Joi
 - pino
@@ -115,6 +116,23 @@ Key files and folders:
 - `src/modules/solvers/integration`: Numerical integration solver implementations.
 - `src/modules/solvers/differentiation`: Numerical differentiation solver implementations.
 - `src/tests`: Jest tests for configuration, API routes, and solver services.
+
+## Database Setup (Neon & Prisma)
+
+1. Create a PostgreSQL database on [Neon](https://neon.tech).
+2. Copy your pooled connection string into `.env`:
+   ```env
+   DATABASE_URL="postgresql://user:password@ep-sample-123456.us-east-2.aws.neon.tech/neondb?sslmode=require"
+   ```
+3. Generate the Prisma Client and apply migrations:
+   ```bash
+   npm run prisma:generate
+   npm run db:migrate
+   ```
+4. (Optional) Open Prisma Studio to inspect records visually:
+   ```bash
+   npm run prisma:studio
+   ```
 
 ## Getting Started
 
