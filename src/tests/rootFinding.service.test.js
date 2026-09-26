@@ -128,4 +128,27 @@ describe('Root-finding services', () => {
       expect(err.code).toBe(errorCodes.SOLVER_PRECONDITION_FAILED);
     }
   });
+
+  test('regression: Regula Falsi correctly detects same-sign bounds with Math.sign even when product underflows', () => {
+    expect(() => solveRegulaFalsi({
+      equation: '1e-200 * x^2 + 1e-200',
+      lowerBound: 1,
+      upperBound: 2,
+      tolerance: 0.0001,
+      maxIterations: 100,
+    })).toThrow(AppError);
+
+    try {
+      solveRegulaFalsi({
+        equation: '1e-200 * x^2 + 1e-200',
+        lowerBound: 1,
+        upperBound: 2,
+        tolerance: 0.0001,
+        maxIterations: 100,
+      });
+    } catch (err) {
+      expect(err.code).toBe(errorCodes.SOLVER_PRECONDITION_FAILED);
+    }
+  });
 });
+

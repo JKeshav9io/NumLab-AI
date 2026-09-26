@@ -67,7 +67,7 @@ function solveBisection(params) {
     });
   }
 
-  if (initialFA * initialFB > 0) {
+  if (Math.sign(initialFA) === Math.sign(initialFB)) {
     throw new AppError(
       'Bisection requires f(lowerBound) and f(upperBound) to have opposite signs',
       400,
@@ -96,7 +96,7 @@ function solveBisection(params) {
     const error = Math.abs(b - a) / 2;
     const exactRoot = fC === 0;
     const toleranceReached = error <= tolerance;
-    const nextInterval = fA * fC < 0 ? '[a, c]' : '[c, b]';
+    const nextInterval = Math.sign(fA) !== Math.sign(fC) ? '[a, c]' : '[c, b]';
     const decision = exactRoot
       ? 'Exact root found at midpoint, stop'
       : toleranceReached
@@ -141,7 +141,7 @@ function solveBisection(params) {
       });
     }
 
-    if (fA * fC < 0) {
+    if (Math.sign(fA) !== Math.sign(fC)) {
       b = c;
       fB = fC;
     } else {

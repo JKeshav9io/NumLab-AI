@@ -54,7 +54,7 @@ function solveRegulaFalsi(params) {
     });
   }
 
-  if (initialFA * initialFB > 0) {
+  if (Math.sign(initialFA) === Math.sign(initialFB)) {
     throw new AppError(
       'Regula Falsi requires f(lowerBound) and f(upperBound) to have opposite signs',
       400,
@@ -84,7 +84,7 @@ function solveRegulaFalsi(params) {
     const error = previousC === null ? Math.abs(b - a) : Math.abs(c - previousC);
     const exactRoot = fC === 0;
     const toleranceReached = Math.abs(fC) <= tolerance || (previousC !== null && error <= tolerance);
-    const nextInterval = fA * fC < 0 ? '[a, c]' : '[c, b]';
+    const nextInterval = Math.sign(fA) !== Math.sign(fC) ? '[a, c]' : '[c, b]';
     const decision = exactRoot
       ? 'Exact root found, stop'
       : toleranceReached
@@ -130,7 +130,7 @@ function solveRegulaFalsi(params) {
       });
     }
 
-    if (fA * fC < 0) {
+    if (Math.sign(fA) !== Math.sign(fC)) {
       b = c;
       fB = fC;
     } else {
