@@ -1,7 +1,7 @@
 'use strict';
 
 const Joi = require('joi');
-const { AppError, errorCodes } = require('../../common/errors');
+const { validate } = require('../../common/validators');
 
 // Modern NIST SP 800-63B Security Guidance:
 // 1. Minimum 8 characters provides essential entropy against brute-force attacks.
@@ -50,39 +50,16 @@ const refreshSchema = Joi.object({
     }),
 });
 
-function validatePayload(schema, body) {
-  const { error, value } = schema.validate(body, {
-    abortEarly: false,
-    stripUnknown: true,
-  });
-
-  if (error) {
-    throw new AppError(
-      'Validation failed',
-      400,
-      errorCodes.VALIDATION_ERROR,
-      {
-        fields: error.details.map((detail) => ({
-          field: detail.path.join('.') || 'body',
-          message: detail.message,
-        })),
-      }
-    );
-  }
-
-  return value;
-}
-
 function validateRegisterRequest(body) {
-  return validatePayload(registerSchema, body);
+  return validate(registerSchema, body);
 }
 
 function validateLoginRequest(body) {
-  return validatePayload(loginSchema, body);
+  return validate(loginSchema, body);
 }
 
 function validateRefreshRequest(body) {
-  return validatePayload(refreshSchema, body);
+  return validate(refreshSchema, body);
 }
 
 module.exports = {

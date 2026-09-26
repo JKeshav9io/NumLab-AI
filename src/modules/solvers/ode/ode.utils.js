@@ -1,13 +1,9 @@
 'use strict';
 
 const { compileExpression, evaluateAt } = require('../../../common/utils/mathParser');
+const round = require('../../../common/utils/round');
 
 const STEP_MULTIPLE_TOLERANCE = 1e-10;
-
-function round(value, decimals = 10) {
-  const rounded = Number.parseFloat(value.toFixed(decimals));
-  return Object.is(rounded, -0) ? 0 : rounded;
-}
 
 function buildInput(params, resolvedSteps) {
   return {

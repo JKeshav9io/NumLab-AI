@@ -2,6 +2,7 @@
 
 const Joi = require('joi');
 const { AppError, errorCodes } = require('../../common/errors');
+const { validate } = require('../../common/validators');
 const {
   CENTRAL_DIFFERENCE_VARIANTS,
   EQUAL_SPACING_TOLERANCE,
@@ -186,19 +187,19 @@ const functionFiniteDifferenceSchema = Joi.object({
 });
 
 function validateBisection(body) {
-  return validateWithSchema(bisectionSchema, body);
+  return validate(bisectionSchema, body);
 }
 
 function validateNewtonRaphson(body) {
-  return validateWithSchema(newtonRaphsonSchema, body);
+  return validate(newtonRaphsonSchema, body);
 }
 
 function validateSecant(body) {
-  return validateWithSchema(secantSchema, body);
+  return validate(secantSchema, body);
 }
 
 function validateRegulaFalsi(body) {
-  return validateWithSchema(regulaFalsiSchema, body);
+  return validate(regulaFalsiSchema, body);
 }
 
 function validateGaussElimination(body) {
@@ -293,19 +294,19 @@ function validateMilneODE(body) {
 }
 
 function validateTrapezoidalIntegration(body) {
-  return validateWithSchema(trapezoidalSchema, body);
+  return validate(trapezoidalSchema, body);
 }
 
 function validateSimpsonOneThirdIntegration(body) {
-  return validateWithSchema(simpsonOneThirdSchema, body);
+  return validate(simpsonOneThirdSchema, body);
 }
 
 function validateSimpsonThreeEighthIntegration(body) {
-  return validateWithSchema(simpsonThreeEighthSchema, body);
+  return validate(simpsonThreeEighthSchema, body);
 }
 
 function validateGaussLegendreIntegration(body) {
-  return validateWithSchema(gaussLegendreSchema, body);
+  return validate(gaussLegendreSchema, body);
 }
 
 function validateForwardDifference(body) {
@@ -340,34 +341,11 @@ function validateLagrangeDifferentiation(body) {
 }
 
 function validateFunctionFiniteDifference(body) {
-  return validateWithSchema(functionFiniteDifferenceSchema, body);
-}
-
-function validateWithSchema(schema, body) {
-  const { error, value } = schema.validate(body, {
-    abortEarly: false,
-    stripUnknown: true,
-  });
-
-  if (error) {
-    throw new AppError(
-      'Validation failed',
-      400,
-      errorCodes.VALIDATION_ERROR,
-      {
-        fields: error.details.map((detail) => ({
-          field: detail.path.join('.') || 'body',
-          message: detail.message,
-        })),
-      }
-    );
-  }
-
-  return value;
+  return validate(functionFiniteDifferenceSchema, body);
 }
 
 function validateODE(schema, body, options) {
-  const value = validateWithSchema(schema, body);
+  const value = validate(schema, body);
   const errors = [];
   const hasXn = value.xn !== undefined;
   const hasSteps = value.steps !== undefined;
@@ -422,7 +400,7 @@ function validateODE(schema, body, options) {
 }
 
 function validateLinearSystem(schema, body) {
-  const value = validateWithSchema(schema, body);
+  const value = validate(schema, body);
   const size = value.matrix.length;
   const dimensionErrors = [];
 
@@ -462,7 +440,7 @@ function validateLinearSystem(schema, body) {
 }
 
 function validateInterpolation(schema, body, options) {
-  const value = validateWithSchema(schema, body);
+  const value = validate(schema, body);
   const errors = [];
 
   if (value.points.length < options.minPoints) {
@@ -559,7 +537,7 @@ function validateInterpolation(schema, body, options) {
 }
 
 function validateTabularDifferentiation(schema, body, options) {
-  const value = validateWithSchema(schema, body);
+  const value = validate(schema, body);
   const errors = [];
   const minPoints = options.minPoints || 2;
 

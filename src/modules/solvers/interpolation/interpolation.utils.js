@@ -6,13 +6,9 @@ const {
   EQUAL_SPACING_TOLERANCE,
   INTERPOLATION_NEAR_ZERO_THRESHOLD,
 } = require('./interpolation.constants');
+const round = require('../../../common/utils/round');
 
 const NEAR_ZERO_THRESHOLD = INTERPOLATION_NEAR_ZERO_THRESHOLD;
-
-function round(value, decimals = 10) {
-  const rounded = Number.parseFloat(value.toFixed(decimals));
-  return Object.is(rounded, -0) ? 0 : rounded;
-}
 
 function roundPoint(point) {
   return {
