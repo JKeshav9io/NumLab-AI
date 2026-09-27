@@ -14,6 +14,16 @@ module.exports = function errorHandler(err, req, res, _next) {
     });
   }
 
+  if (err.status === 413 || err.statusCode === 413 || err.type === 'entity.too.large') {
+    return res.status(413).json({
+      success: false,
+      error: {
+        code: errorCodes.PAYLOAD_TOO_LARGE,
+        message: 'Request payload exceeds the maximum allowed limit of 1MB',
+      },
+    });
+  }
+
   if (err instanceof AppError) {
     if (err.statusCode >= 500) {
       logger.error({ err, requestId: req.id, details: err.details }, 'Server error encountered');

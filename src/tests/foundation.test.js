@@ -91,9 +91,23 @@ describe('config foundation', () => {
 });
 
 describe('Express app foundation', () => {
+  afterAll(async () => {
+    try {
+      const db = require('../db');
+      await db.gracefulShutdown();
+    } catch (_err) {
+      // Ignore
+    }
+  });
+
   test('GET /health returns healthy when database is reachable', async () => {
-    jest.resetModules();
     process.env.NODE_ENV = 'test';
+
+    const db = require('../db');
+    jest.spyOn(db, 'healthCheck').mockResolvedValueOnce({
+      status: 'healthy',
+      database: 'connected',
+    });
 
     const createApp = require('../app');
     const app = createApp();
@@ -117,7 +131,6 @@ describe('Express app foundation', () => {
   });
 
   test('GET /health returns 503 unhealthy when database fails', async () => {
-    jest.resetModules();
     process.env.NODE_ENV = 'test';
 
     const db = require('../db');
@@ -149,4 +162,35 @@ describe('Express app foundation', () => {
       });
     }
   });
+
+  test('POST with payload exceeding 1MB returns 413 PAYLOAD_TOO_LARGE', async () => {
+    process.env.NODE_ENV = 'test';
+
+    const createApp = require('../app');
+    const app = createApp();
+    const server = app.listen(0);
+
+    try {
+      const { port } = server.address();
+      const largeData = 'x'.repeat(1.2 * 1024 * 1024);
+      const response = await fetch(`http://127.0.0.1:${port}/api/v1/solve/root/bisection`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ equation: largeData }),
+      });
+      const body = await response.json();
+
+      expect(response.status).toBe(413);
+      expect(body.success).toBe(false);
+      expect(body.error.code).toBe('PAYLOAD_TOO_LARGE');
+    } finally {
+      await new Promise((resolve, reject) => {
+        server.close((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    }
+  });
 });
+

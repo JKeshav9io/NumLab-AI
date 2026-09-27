@@ -57,6 +57,10 @@ async function register(email, password) {
   };
 }
 
+// Constant dummy bcrypt hash (cost factor 12) used to equalize execution timing
+// and prevent user enumeration side-channel attacks when a user is not found.
+const DUMMY_BCRYPT_HASH = '$2b$12$e8uq5e.K3w6qTz4nOqW5Ie6jN6k9I3R1X8m7fF.fV0e5yJ6kL9a2';
+
 /**
  * Authenticates a user by email and password and issues a new token pair.
  * @param {string} email
@@ -67,8 +71,10 @@ async function login(email, password) {
   const normalizedEmail = email.toLowerCase().trim();
   const user = await userRepository.findByEmail(normalizedEmail);
 
-  // Security note: We use a generic message to prevent account enumeration attacks.
   if (!user) {
+    // Perform dummy bcrypt comparison to ensure non-existent users incur the same
+    // CPU processing time as existing users, eliminating the timing side-channel.
+    await verifyPassword(password, DUMMY_BCRYPT_HASH);
     throw new AppError(
       'Invalid email or password',
       401,
