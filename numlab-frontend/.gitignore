@@ -1,0 +1,81 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Visual Studio Code
+.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+pubspec-overrides.yaml
+/build/
+/coverage/
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+key.properties
+google-services.json
+GoogleService-Info.plist
+
+# Build outputs
+*.apk
+*.aab
+*.ipa
+
+# OS and system files
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Personal Notes & Frontend Architecture Reference Documentation
+personal_notes/
+
+# Local AI Session & Instructions (not tracked in repo)
+AGENTS.md
+AI_INSTRUCTIONS.md
+scratch/
+.codex/
+
+# Graphify Output & Internals
+graphify-out/
+.graphify_labels.json
+.graphify_root
+
