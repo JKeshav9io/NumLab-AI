@@ -1,55 +1,91 @@
-# Dependencies
-node_modules/
-
-# Environment variables
+# Environment & Secrets (Never commit .env or secrets)
 .env
 .env.*
 !.env.example
+*.keystore
+*.jks
+key.properties
+google-services.json
+GoogleService-Info.plist
 
-# Logs
-logs/
-*.log
+# Node / Backend
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-
-# Runtime data & temp files
 pids/
 *.pid
 *.seed
 *.pid.lock
+numlab-backend/src/generated/prisma
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+pubspec-overrides.yaml
+build/
+**/build/
+coverage/
+**/coverage/
+**/ios/Flutter/.last_build_id
+ios/Pods/
+**/ios/Pods/
+android/.gradle/
+**/android/.gradle/
+android/app/debug
+android/app/profile
+android/app/release
+*.apk
+*.aab
+*.ipa
+app.*.symbols
+app.*.map.json
+
+# IDE & OS Files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.DS_Store
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+
+# Temp & Scratch Files
 scratch/
 tmp/
 /reports/
+numlab-backend/reports/
+*.log
+logs/
 
-# Coverage and build output
-coverage/
-dist/
-build/
-/src/generated/prisma
-
-# OS and editor files
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
-
-# Local session memory and tooling (not tracked in repo)
+# Local AI Session Memory, Instructions & Reference Documentation
 MEMORY.md
 memory.md
+FRONTEND_MEMORY.md
+*MEMORY.md
+*memory.md
 AGENTS.md
 AI_INSTRUCTIONS.md
+skills-lock.json
+resume_analysis/
+personal_notes/
 .agents/
 .codex/
 .claude/
 .windsurf/
 graphify-out/
-skills-lock.json
-resume_analysis/
+.graphify*
 
-# Local reference and planning documentation (not tracked in repo)
+# Local Reference & Planning Documentation
 API_SPEC.md
 ARCHITECTURE.md
 PROJECT_BLUEPRINT.md
 FRONTEND_PLAN.md
+FRONTEND_RULES.md
