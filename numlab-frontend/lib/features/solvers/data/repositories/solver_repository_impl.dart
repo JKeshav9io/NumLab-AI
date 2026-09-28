@@ -3,7 +3,7 @@ import 'package:numlab_frontend/core/error/error_mapper.dart';
 import 'package:numlab_frontend/core/error/failures.dart';
 import 'package:numlab_frontend/core/storage/secure_storage_service.dart';
 import 'package:numlab_frontend/features/solvers/data/datasources/solver_remote_data_source.dart';
-import 'package:numlab_frontend/features/solvers/data/models/solver_result_model.dart';
+import 'package:numlab_frontend/features/solvers/domain/entities/solver_result.dart';
 import 'package:numlab_frontend/features/solvers/domain/models/solver_method_config.dart';
 import 'package:numlab_frontend/features/solvers/domain/repositories/solver_repository.dart';
 
@@ -22,7 +22,7 @@ class SolverRepositoryImpl implements SolverRepository {
   final SecureStorageService? _secureStorageService;
 
   @override
-  Future<Either<Failure, SolverResultModel>> solve({
+  Future<Either<Failure, SolverResult>> solve({
     required SolverMethodConfig config,
     required Map<String, dynamic> payload,
     String? accessToken,
