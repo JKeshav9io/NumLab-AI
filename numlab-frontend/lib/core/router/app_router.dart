@@ -5,8 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:numlab_frontend/features/auth/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/auth/presentation/screens/screens.dart';
-import 'package:numlab_frontend/features/placeholder/presentation/placeholder_home_screen.dart';
 import 'package:numlab_frontend/features/profile/presentation/profile_screen.dart';
+import 'package:numlab_frontend/features/solvers/presentation/bloc/bloc.dart';
+import 'package:numlab_frontend/features/solvers/presentation/screens/screens.dart';
 import 'package:numlab_frontend/injection_container.dart';
 
 /// Central application route constants and path utilities.
@@ -17,6 +18,9 @@ abstract final class AppRoutes {
   static const String solverPrefix = '/solver';
   static const String history = '/history';
   static const String profile = '/profile';
+
+  /// Builds a solver path for the specified [id].
+  static String solver(String id) => '$solverPrefix/$id';
 
   /// Returns true if [location] requires an authenticated session.
   static bool isProtectedRoute(String location) {
@@ -69,8 +73,21 @@ class AppRouter {
           name: 'home',
           builder: (context, state) => BlocProvider.value(
             value: _authBloc,
-            child: const PlaceholderHomeScreen(),
+            child: const HomeScreen(),
           ),
+        ),
+        GoRoute(
+          path: '${AppRoutes.solverPrefix}/:solverId',
+          name: 'solver',
+          builder: (context, state) {
+            final solverId = state.pathParameters['solverId'] ?? '';
+            return BlocProvider<SolverFormBloc>(
+              create: (_) =>
+                  sl<SolverFormBloc>()
+                    ..add(SolverFormLoadStarted(solverId: solverId)),
+              child: SolverFormScreen(solverId: solverId),
+            );
+          },
         ),
         GoRoute(
           path: AppRoutes.login,

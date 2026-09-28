@@ -13,6 +13,8 @@ import 'package:numlab_frontend/features/auth/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/solvers/data/datasources/solver_remote_data_source.dart';
 import 'package:numlab_frontend/features/solvers/data/repositories/solver_repository_impl.dart';
 import 'package:numlab_frontend/features/solvers/domain/repositories/solver_repository.dart';
+import 'package:numlab_frontend/features/solvers/domain/usecases/usecases.dart';
+import 'package:numlab_frontend/features/solvers/presentation/bloc/bloc.dart';
 
 /// Global service locator instance.
 final GetIt sl = GetIt.instance;
@@ -92,7 +94,7 @@ Future<void> initDependencies() async {
     ..registerLazySingleton<AppRouter>(
       () => AppRouter(authBloc: sl<AuthBloc>()),
     )
-    // 6. Solvers Feature (Phase 2b Data Layer)
+    // 6. Solvers Feature (Data & Domain)
     ..registerLazySingleton<SolverRemoteDataSource>(
       () => SolverRemoteDataSourceImpl(dio: sl<Dio>()),
     )
@@ -100,6 +102,14 @@ Future<void> initDependencies() async {
       () => SolverRepositoryImpl(
         remoteDataSource: sl<SolverRemoteDataSource>(),
         secureStorageService: sl<SecureStorageService>(),
+      ),
+    )
+    ..registerLazySingleton<ExecuteSolverUseCase>(
+      () => ExecuteSolverUseCase(sl<SolverRepository>()),
+    )
+    ..registerFactory<SolverFormBloc>(
+      () => SolverFormBloc(
+        executeSolverUseCase: sl<ExecuteSolverUseCase>(),
       ),
     );
 }
