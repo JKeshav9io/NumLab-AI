@@ -12,14 +12,14 @@ void main() {
     await sl.reset();
   });
 
-  testWidgets('NumLabApp boots and renders Phase 0 placeholder screen', (
+  testWidgets('NumLabApp boots and renders HomeScreen', (
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(const NumLabApp());
     await tester.pumpAndSettle();
 
     expect(find.text('NumLab AI'), findsOneWidget);
-    expect(find.text('Phase 0 Architecture Scaffold'), findsOneWidget);
-    expect(find.text('Architecture Verification'), findsOneWidget);
+    expect(find.text('Numerical Solvers'), findsOneWidget);
+    expect(find.text('All (27)'), findsOneWidget);
   });
 }

@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:numlab_frontend/core/router/app_router.dart';
 import 'package:numlab_frontend/features/auth/domain/entities/user.dart';
 import 'package:numlab_frontend/features/auth/presentation/bloc/bloc.dart';
-import 'package:numlab_frontend/features/placeholder/presentation/placeholder_home_screen.dart';
+import 'package:numlab_frontend/features/solvers/presentation/screens/screens.dart';
 
 class MockAuthBloc extends Fake implements AuthBloc {
   MockAuthBloc(this._initialState) {
@@ -137,7 +137,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.byType(PlaceholderHomeScreen), findsOneWidget);
+        expect(find.byType(HomeScreen), findsOneWidget);
         expect(find.byKey(const Key('login_screen')), findsNothing);
       },
     );
@@ -158,7 +158,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.byType(PlaceholderHomeScreen), findsOneWidget);
+        expect(find.byType(HomeScreen), findsOneWidget);
         expect(find.byKey(const Key('register_screen')), findsNothing);
       },
     );
@@ -268,7 +268,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.byType(PlaceholderHomeScreen), findsOneWidget);
+        expect(find.byType(HomeScreen), findsOneWidget);
         expect(find.byKey(const Key('login_screen')), findsNothing);
       },
     );
@@ -296,7 +296,7 @@ void main() {
         appRouter.router.go('${AppRoutes.login}?from=${AppRoutes.login}');
         await tester.pumpAndSettle();
 
-        expect(find.byType(PlaceholderHomeScreen), findsOneWidget);
+        expect(find.byType(HomeScreen), findsOneWidget);
       },
     );
 

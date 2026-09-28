@@ -6,6 +6,7 @@ import 'package:numlab_frontend/core/storage/secure_storage_service.dart';
 import 'package:numlab_frontend/features/solvers/data/datasources/solver_remote_data_source.dart';
 import 'package:numlab_frontend/features/solvers/data/models/solver_result_model.dart';
 import 'package:numlab_frontend/features/solvers/data/repositories/solver_repository_impl.dart';
+import 'package:numlab_frontend/features/solvers/domain/entities/entities.dart';
 import 'package:numlab_frontend/features/solvers/domain/models/models.dart';
 
 class MockSolverRemoteDataSource extends Fake
@@ -60,7 +61,7 @@ void main() {
   });
 
   group('SolverRepositoryImpl — Success and Token Handling', () {
-    test('returns Right(SolverResultModel) on successful solve', () async {
+    test('returns Right(SolverResult) on successful solve', () async {
       mockRemoteDataSource.onSolve =
           ({
             required config,
@@ -75,7 +76,7 @@ void main() {
         payload: const {'equation': 'x^2 - 4'},
       );
 
-      expect(result, const Right<Failure, SolverResultModel>(sampleResult));
+      expect(result, const Right<Failure, SolverResult>(sampleResult));
     });
 
     test('uses explicitly passed accessToken when provided', () async {
@@ -127,7 +128,7 @@ void main() {
     );
 
     test('executes anonymously when no token in secure storage', () async {
-      String? passedToken;
+      String? passedToken = 'not-null-sentinel';
       mockSecureStorage.mockAccessToken = null;
 
       mockRemoteDataSource.onSolve =
@@ -140,12 +141,13 @@ void main() {
             return sampleResult;
           };
 
-      await repository.solve(
+      final result = await repository.solve(
         config: SolverMethodRegistry.bisection,
         payload: const {'equation': 'x^2 - 4'},
       );
 
       expect(passedToken, isNull);
+      expect(result.isRight(), isTrue);
     });
 
     test('supports different solver categories seamlessly', () async {
@@ -179,7 +181,7 @@ void main() {
         },
       );
 
-      expect(linearOutcome, isA<Right<Failure, SolverResultModel>>());
+      expect(linearOutcome, isA<Right<Failure, SolverResult>>());
       expect(
         linearOutcome.getOrElse((_) => sampleResult).method,
         'Jacobi Method',
@@ -211,7 +213,7 @@ void main() {
         },
       );
 
-      expect(interpOutcome, isA<Right<Failure, SolverResultModel>>());
+      expect(interpOutcome, isA<Right<Failure, SolverResult>>());
       expect(
         interpOutcome.getOrElse((_) => sampleResult).method,
         'Lagrange Interpolation',
@@ -260,7 +262,7 @@ void main() {
           payload: const {'lowerBound': 2.0, 'upperBound': 1.0},
         );
 
-        expect(result, isA<Left<Failure, SolverResultModel>>());
+        expect(result, isA<Left<Failure, SolverResult>>());
         result.fold(
           (failure) {
             expect(failure, isA<ValidationFailure>());
@@ -307,7 +309,7 @@ void main() {
         payload: const {},
       );
 
-      expect(result, isA<Left<Failure, SolverResultModel>>());
+      expect(result, isA<Left<Failure, SolverResult>>());
       result.fold(
         (failure) {
           expect(failure, isA<RateLimitFailure>());
@@ -339,7 +341,7 @@ void main() {
         payload: const {},
       );
 
-      expect(result, isA<Left<Failure, SolverResultModel>>());
+      expect(result, isA<Left<Failure, SolverResult>>());
       result.fold(
         (failure) {
           expect(failure, isA<NetworkFailure>());
@@ -377,7 +379,7 @@ void main() {
         payload: const {},
       );
 
-      expect(result, isA<Left<Failure, SolverResultModel>>());
+      expect(result, isA<Left<Failure, SolverResult>>());
       result.fold(
         (failure) {
           expect(failure, isA<ServerFailure>());
@@ -406,7 +408,7 @@ void main() {
           payload: const {},
         );
 
-        expect(result, isA<Left<Failure, SolverResultModel>>());
+        expect(result, isA<Left<Failure, SolverResult>>());
         result.fold(
           (failure) {
             expect(failure, isA<ServerFailure>());
