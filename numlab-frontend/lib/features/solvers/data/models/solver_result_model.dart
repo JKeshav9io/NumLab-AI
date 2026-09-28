@@ -1,12 +1,14 @@
-import 'package:equatable/equatable.dart';
+import 'package:numlab_frontend/features/solvers/domain/entities/solver_explanation.dart';
+import 'package:numlab_frontend/features/solvers/domain/entities/solver_result.dart';
 
 /// Step-by-step mathematical explanation model included in solver responses.
-class SolverExplanationModel extends Equatable {
+class SolverExplanationModel extends SolverExplanation {
   const SolverExplanationModel({
-    required this.summary,
-    required this.steps,
+    required super.summary,
+    required super.steps,
   });
 
+  /// Factory constructor parsing from backend JSON response.
   factory SolverExplanationModel.fromJson(Map<String, dynamic> json) {
     return SolverExplanationModel(
       summary: json['summary'] as String? ?? '',
@@ -18,11 +20,19 @@ class SolverExplanationModel extends Equatable {
     );
   }
 
-  /// Summary explanation of the algorithm's outcome.
-  final String summary;
+  /// Constructs a [SolverExplanationModel] from a domain [SolverExplanation] entity.
+  factory SolverExplanationModel.fromEntity(SolverExplanation entity) {
+    return SolverExplanationModel(
+      summary: entity.summary,
+      steps: entity.steps,
+    );
+  }
 
-  /// Ordered step-by-step mathematical reasoning steps.
-  final List<String> steps;
+  /// Converts this model to a pure domain [SolverExplanation] entity.
+  SolverExplanation toEntity() => SolverExplanation(
+    summary: summary,
+    steps: steps,
+  );
 
   Map<String, dynamic> toJson() {
     return {
@@ -30,25 +40,22 @@ class SolverExplanationModel extends Equatable {
       'steps': steps,
     };
   }
-
-  @override
-  List<Object?> get props => [summary, steps];
 }
 
 /// Generic data model representing the backend execution response of any of the 27 numerical solvers.
-class SolverResultModel extends Equatable {
+class SolverResultModel extends SolverResult {
   const SolverResultModel({
-    required this.method,
-    required this.finalAnswer,
-    this.status,
-    this.input = const {},
-    this.iterations = const [],
-    this.explanation,
-    this.graphData,
-    this.warnings = const [],
-    this.executionTimeMs = 0,
-    this.requestId,
-    this.timestamp,
+    required super.method,
+    required super.finalAnswer,
+    super.status,
+    super.input = const {},
+    super.iterations = const [],
+    super.explanation,
+    super.graphData,
+    super.warnings = const [],
+    super.executionTimeMs = 0,
+    super.requestId,
+    super.timestamp,
   });
 
   /// Parses from either the complete response envelope `{ success, data, meta }`
@@ -58,78 +65,119 @@ class SolverResultModel extends Equatable {
         json.containsKey('data') && json['data'] is Map<String, dynamic>
         ? json['data'] as Map<String, dynamic>
         : json;
-    final meta = json['meta'] as Map<String, dynamic>?;
+
+    final meta =
+        (json['meta'] is Map<String, dynamic>
+            ? json['meta'] as Map<String, dynamic>
+            : null) ??
+        (data['meta'] is Map<String, dynamic>
+            ? data['meta'] as Map<String, dynamic>
+            : null);
+
+    final requestId =
+        (meta?['requestId'] ?? data['requestId'] ?? json['requestId'])
+            ?.toString();
+    final timestamp =
+        (meta?['timestamp'] ?? data['timestamp'] ?? json['timestamp'])
+            ?.toString();
+
+    SolverExplanationModel? explanation;
+    if (data['explanation'] != null) {
+      if (data['explanation'] is Map<String, dynamic>) {
+        explanation = SolverExplanationModel.fromJson(
+          data['explanation'] as Map<String, dynamic>,
+        );
+      } else if (data['explanation'] is String &&
+          (data['explanation'] as String).isNotEmpty) {
+        explanation = SolverExplanationModel(
+          summary: data['explanation'] as String,
+          steps: const [],
+        );
+      }
+    }
+
+    final rawWarnings = data['warnings'];
+    var warnings = const <String>[];
+    if (rawWarnings is List) {
+      warnings = rawWarnings.map((e) => e.toString()).toList(growable: false);
+    } else if (rawWarnings is String && rawWarnings.isNotEmpty) {
+      warnings = [rawWarnings];
+    }
+
+    var executionTime = 0;
+    final timeVal = data['executionTimeMs'] ?? data['executionTime'];
+    if (timeVal is num) {
+      executionTime = timeVal.toInt();
+    } else if (timeVal is String) {
+      executionTime =
+          int.tryParse(timeVal) ?? (double.tryParse(timeVal)?.toInt() ?? 0);
+    }
+
+    var finalAnswer = const <String, dynamic>{};
+    if (data['finalAnswer'] is Map<String, dynamic>) {
+      finalAnswer = data['finalAnswer'] as Map<String, dynamic>;
+    } else if (data['result'] is Map<String, dynamic>) {
+      finalAnswer = data['result'] as Map<String, dynamic>;
+    }
 
     return SolverResultModel(
       method: data['method'] as String? ?? '',
       status: data['status'] as String?,
-      input: data['input'] as Map<String, dynamic>? ?? const {},
+      input: data['input'] is Map<String, dynamic>
+          ? data['input'] as Map<String, dynamic>
+          : const {},
       iterations: data['iterations'] is List
           ? (data['iterations'] as List<dynamic>)
           : const [],
-      finalAnswer: data['finalAnswer'] as Map<String, dynamic>? ?? const {},
-      explanation:
-          data['explanation'] != null &&
-              data['explanation'] is Map<String, dynamic>
-          ? SolverExplanationModel.fromJson(
-              data['explanation'] as Map<String, dynamic>,
-            )
-          : null,
+      finalAnswer: finalAnswer,
+      explanation: explanation,
       graphData: data['graphData'],
-      warnings:
-          (data['warnings'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList(growable: false) ??
-          const [],
-      executionTimeMs: (data['executionTimeMs'] as num?)?.toInt() ?? 0,
-      requestId: meta?['requestId'] as String?,
-      timestamp: meta?['timestamp'] as String?,
+      warnings: warnings,
+      executionTimeMs: executionTime,
+      requestId: requestId,
+      timestamp: timestamp,
     );
   }
 
-  /// The method name returned by the solver service.
-  final String method;
+  /// Constructs a [SolverResultModel] from a domain [SolverResult] entity.
+  factory SolverResultModel.fromEntity(SolverResult entity) {
+    return SolverResultModel(
+      method: entity.method,
+      status: entity.status,
+      input: entity.input,
+      iterations: entity.iterations,
+      finalAnswer: entity.finalAnswer,
+      explanation: entity.explanation != null
+          ? (entity.explanation is SolverExplanationModel
+                ? entity.explanation! as SolverExplanationModel
+                : SolverExplanationModel.fromEntity(entity.explanation!))
+          : null,
+      graphData: entity.graphData,
+      warnings: entity.warnings,
+      executionTimeMs: entity.executionTimeMs,
+      requestId: entity.requestId,
+      timestamp: entity.timestamp,
+    );
+  }
 
-  /// Optional convergence or execution status (e.g. 'converged', 'diverged', 'max_iterations_reached').
-  final String? status;
-
-  /// Echo of the validated input parameters.
-  final Map<String, dynamic> input;
-
-  /// Detailed per-iteration tabular steps or intermediate calculations.
-  final List<dynamic> iterations;
-
-  /// Key mathematical results (e.g. root, solution vector, predicted value, error).
-  final Map<String, dynamic> finalAnswer;
-
-  /// Optional AI / algorithmic explanation steps.
-  final SolverExplanationModel? explanation;
-
-  /// Optional 2D curve and iteration point coordinates for plotting.
-  final dynamic graphData;
-
-  /// Non-fatal mathematical warnings (e.g. non-diagonally dominant matrix).
-  final List<String> warnings;
-
-  /// Wall-clock backend calculation time in milliseconds.
-  final int executionTimeMs;
-
-  /// Request ID extracted from response metadata.
-  final String? requestId;
-
-  /// Timestamp extracted from response metadata.
-  final String? timestamp;
-
-  /// Whether the solver converged to the specified tolerance.
-  bool get isConverged =>
-      (finalAnswer['converged'] as bool?) ?? (status == 'converged');
-
-  /// Convenience accessor for single-variable root-finding solvers.
-  num? get root => finalAnswer['root'] as num?;
-
-  /// Convenience accessor for linear system solution vectors.
-  List<dynamic>? get solutionVector =>
-      finalAnswer['solution'] as List<dynamic>?;
+  /// Converts this model to a pure domain [SolverResult] entity.
+  SolverResult toEntity() => SolverResult(
+    method: method,
+    status: status,
+    input: input,
+    iterations: iterations,
+    finalAnswer: finalAnswer,
+    explanation: explanation != null
+        ? (explanation is SolverExplanationModel
+              ? (explanation! as SolverExplanationModel).toEntity()
+              : explanation)
+        : null,
+    graphData: graphData,
+    warnings: warnings,
+    executionTimeMs: executionTimeMs,
+    requestId: requestId,
+    timestamp: timestamp,
+  );
 
   Map<String, dynamic> toJson() {
     return {
@@ -138,7 +186,10 @@ class SolverResultModel extends Equatable {
       'input': input,
       'iterations': iterations,
       'finalAnswer': finalAnswer,
-      if (explanation != null) 'explanation': explanation!.toJson(),
+      if (explanation != null)
+        'explanation': (explanation is SolverExplanationModel
+            ? (explanation! as SolverExplanationModel).toJson()
+            : SolverExplanationModel.fromEntity(explanation!).toJson()),
       if (graphData != null) 'graphData': graphData,
       'warnings': warnings,
       'executionTimeMs': executionTimeMs,
@@ -149,19 +200,4 @@ class SolverResultModel extends Equatable {
         },
     };
   }
-
-  @override
-  List<Object?> get props => [
-    method,
-    status,
-    input,
-    iterations,
-    finalAnswer,
-    explanation,
-    graphData,
-    warnings,
-    executionTimeMs,
-    requestId,
-    timestamp,
-  ];
 }

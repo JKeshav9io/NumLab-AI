@@ -164,14 +164,20 @@ abstract final class SolverMethodRegistry {
   // COMMON REUSABLE CROSS-FIELD RULES
   // ===========================================================================
 
+  static num? _tryParseNum(dynamic value) {
+    if (value is num) return value;
+    if (value is String) return num.tryParse(value.trim());
+    return null;
+  }
+
   static final SolverCrossFieldRule _boundsOrderedRule = SolverCrossFieldRule(
     id: 'bounds.ordered',
     description: 'lowerBound must be less than upperBound',
     affectedFieldNames: const ['lowerBound', 'upperBound'],
     validator: (values) {
-      final lower = values['lowerBound'];
-      final upper = values['upperBound'];
-      if (lower is num && upper is num && lower >= upper) {
+      final lower = _tryParseNum(values['lowerBound']);
+      final upper = _tryParseNum(values['upperBound']);
+      if (lower != null && upper != null && lower >= upper) {
         return 'lowerBound must be less than upperBound';
       }
       return null;
@@ -184,9 +190,9 @@ abstract final class SolverMethodRegistry {
         description: 'firstGuess and secondGuess must be different',
         affectedFieldNames: const ['firstGuess', 'secondGuess'],
         validator: (values) {
-          final first = values['firstGuess'];
-          final second = values['secondGuess'];
-          if (first is num && second is num && first == second) {
+          final first = _tryParseNum(values['firstGuess']);
+          final second = _tryParseNum(values['secondGuess']);
+          if (first != null && second != null && first == second) {
             return 'firstGuess and secondGuess must be different';
           }
           return null;
@@ -241,12 +247,14 @@ abstract final class SolverMethodRegistry {
       if (points is List) {
         final seen = <num>{};
         for (final pt in points) {
-          if (pt is Map && pt['x'] is num) {
-            final x = pt['x'] as num;
-            if (seen.contains(x)) {
-              return 'x values must be unique';
+          if (pt is Map) {
+            final x = _tryParseNum(pt['x']);
+            if (x != null) {
+              if (seen.contains(x)) {
+                return 'x values must be unique';
+              }
+              seen.add(x);
             }
-            seen.add(x);
           }
         }
       }
@@ -264,8 +272,11 @@ abstract final class SolverMethodRegistry {
       if (points is List && points.length >= 2) {
         final xList = <num>[];
         for (final pt in points) {
-          if (pt is Map && pt['x'] is num) {
-            xList.add(pt['x'] as num);
+          if (pt is Map) {
+            final x = _tryParseNum(pt['x']);
+            if (x != null) {
+              xList.add(x);
+            }
           }
         }
         if (xList.length < points.length) return null;
@@ -292,8 +303,14 @@ abstract final class SolverMethodRegistry {
           'Provide either xn or steps, with xn > x0 and exact step multiple',
       affectedFieldNames: const ['x0', 'h', 'xn', 'steps'],
       validator: (values) {
-        final hasXn = values['xn'] != null;
-        final hasSteps = values['steps'] != null;
+        final hasXn =
+            values['xn'] != null &&
+            (values['xn'] is! String ||
+                (values['xn'] as String).trim().isNotEmpty);
+        final hasSteps =
+            values['steps'] != null &&
+            (values['steps'] is! String ||
+                (values['steps'] as String).trim().isNotEmpty);
 
         if (!hasXn && !hasSteps) {
           return 'either xn or steps is required';
@@ -302,12 +319,12 @@ abstract final class SolverMethodRegistry {
           return 'provide either xn or steps, not both';
         }
 
-        final x0 = values['x0'];
-        final h = values['h'];
-        final xn = values['xn'];
-        final steps = values['steps'];
+        final x0 = _tryParseNum(values['x0']);
+        final h = _tryParseNum(values['h']);
+        final xn = _tryParseNum(values['xn']);
+        final steps = _tryParseNum(values['steps']);
 
-        if (hasXn && x0 is num && h is num && xn is num) {
+        if (hasXn && x0 != null && h != null && xn != null) {
           if (xn <= x0) {
             return 'xn must be greater than x0 for positive h';
           }
@@ -321,7 +338,7 @@ abstract final class SolverMethodRegistry {
           }
         }
 
-        if (hasSteps && steps is num && minSteps != null && steps < minSteps) {
+        if (hasSteps && steps != null && minSteps != null && steps < minSteps) {
           return 'Requires at least $minSteps steps';
         }
 

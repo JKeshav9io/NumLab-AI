@@ -56,9 +56,123 @@ class SolverInputFieldConfig extends Equatable {
   /// Predefined selectable choices when [type] is [SolverInputFieldType.select].
   final List<SolverSelectOption>? options;
 
-  /// Validates a given [value] using this field's validation rules.
+  /// Validates a given [value] using this field's validation rules and type constraints.
   String? validate(dynamic value) {
-    return validation.validate(value, fieldLabel: label);
+    if (validation.isRequired) {
+      if (value == null) {
+        return '$label is required';
+      }
+      if (value is String && value.trim().isEmpty) {
+        return '$label is required';
+      }
+      if (value is Iterable && value.isEmpty) {
+        return '$label is required';
+      }
+    } else if (value == null || (value is String && value.trim().isEmpty)) {
+      // Optional field with no value is valid
+      return null;
+    }
+
+    switch (type) {
+      case SolverInputFieldType.number:
+        num? numericVal;
+        if (value is num) {
+          numericVal = value;
+        } else if (value is String) {
+          numericVal = num.tryParse(value.trim());
+          if (numericVal == null) {
+            return '$label must be a valid number';
+          }
+        } else {
+          return '$label must be a valid number';
+        }
+        return validation.validate(numericVal, fieldLabel: label);
+
+      case SolverInputFieldType.integer:
+        int? intVal;
+        if (value is int) {
+          intVal = value;
+        } else if (value is num) {
+          if (value % 1 == 0) {
+            intVal = value.toInt();
+          } else {
+            return '$label must be a valid integer';
+          }
+        } else if (value is String) {
+          intVal = int.tryParse(value.trim());
+          if (intVal == null) {
+            return '$label must be a valid integer';
+          }
+        } else {
+          return '$label must be a valid integer';
+        }
+        return validation.validate(intVal, fieldLabel: label);
+
+      case SolverInputFieldType.vector:
+        if (value is! List) {
+          return '$label must be a valid numeric vector';
+        }
+        for (final item in value) {
+          if (item is! num &&
+              (item is! String || num.tryParse(item.trim()) == null)) {
+            return '$label elements must be valid numbers';
+          }
+        }
+        return validation.validate(value, fieldLabel: label);
+
+      case SolverInputFieldType.matrix:
+        if (value is! List) {
+          return '$label must be a valid numeric matrix';
+        }
+        if (value.isNotEmpty) {
+          int? expectedCols;
+          for (final row in value) {
+            if (row is! List) {
+              return '$label rows must be lists';
+            }
+            if (expectedCols == null) {
+              expectedCols = row.length;
+            } else if (row.length != expectedCols) {
+              return '$label rows must all have the same length ($expectedCols)';
+            }
+            for (final cell in row) {
+              if (cell is! num &&
+                  (cell is! String || num.tryParse(cell.trim()) == null)) {
+                return '$label matrix cells must be valid numbers';
+              }
+            }
+          }
+        }
+        return validation.validate(value, fieldLabel: label);
+
+      case SolverInputFieldType.pointList:
+        if (value is! List) {
+          return '$label must be a valid list of coordinates';
+        }
+        for (final pt in value) {
+          if (pt is! Map) {
+            return '$label items must be point objects with x and y coordinates';
+          }
+          final rawX = pt['x'];
+          final rawY = pt['y'];
+          if (rawX == null ||
+              (rawX is! num &&
+                  (rawX is! String || num.tryParse(rawX.trim()) == null))) {
+            return '$label points must contain valid numeric x coordinates';
+          }
+          if (rawY == null ||
+              (rawY is! num &&
+                  (rawY is! String || num.tryParse(rawY.trim()) == null))) {
+            return '$label points must contain valid numeric y coordinates';
+          }
+        }
+        return validation.validate(value, fieldLabel: label);
+
+      case SolverInputFieldType.equation:
+      case SolverInputFieldType.boolean:
+      case SolverInputFieldType.select:
+        return validation.validate(value, fieldLabel: label);
+    }
   }
 
   @override
