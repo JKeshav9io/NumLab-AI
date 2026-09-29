@@ -32,28 +32,44 @@ class SolverIterationsView extends StatelessWidget {
         tilePadding: EdgeInsets.zero,
         childrenPadding: const EdgeInsets.only(top: AppSpacing.xs),
         children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              headingRowHeight: 36,
-              dataRowMinHeight: 32,
-              dataRowMaxHeight: 48,
-              columns: _extractColumns(),
-              rows: _extractRows(),
-            ),
+          Builder(
+            builder: (context) {
+              final columnKeys = _extractColumnKeys();
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: DataTable(
+                  headingRowHeight: 36,
+                  dataRowMinHeight: 32,
+                  dataRowMaxHeight: 48,
+                  columns: _extractColumns(columnKeys),
+                  rows: _extractRows(columnKeys),
+                ),
+              );
+            },
           ),
         ],
       ),
     );
   }
 
-  List<DataColumn> _extractColumns() {
-    if (iterations.first is Map) {
-      final keys = (iterations.first as Map).keys;
-      return keys.map((k) {
+  List<String> _extractColumnKeys() {
+    final keySet = <String>{};
+    for (final item in iterations) {
+      if (item is Map) {
+        for (final k in item.keys) {
+          keySet.add(k.toString());
+        }
+      }
+    }
+    return keySet.toList();
+  }
+
+  List<DataColumn> _extractColumns(List<String> columnKeys) {
+    if (columnKeys.isNotEmpty) {
+      return columnKeys.map((k) {
         return DataColumn(
           label: Text(
-            SolverFinalAnswerView.formatKeyLabel(k.toString()),
+            SolverFinalAnswerView.formatKeyLabel(k),
             style: AppTypography.bodyMedium.copyWith(
               fontWeight: FontWeight.bold,
             ),
@@ -68,16 +84,21 @@ class SolverIterationsView extends StatelessWidget {
     ];
   }
 
-  List<DataRow> _extractRows() {
+  List<DataRow> _extractRows(List<String> columnKeys) {
     return iterations.asMap().entries.map((entry) {
       final index = entry.key;
       final row = entry.value;
 
-      if (row is Map) {
-        final cells = row.values.map((v) {
+      if (columnKeys.isNotEmpty && row is Map) {
+        final cells = columnKeys.map((k) {
+          final val = row[k];
+          final text = val != null
+              ? SolverFinalAnswerView.formatValue(val)
+              : '—';
+
           return DataCell(
             Text(
-              SolverFinalAnswerView.formatValue(v),
+              text,
               style: AppTypography.codeMono.copyWith(fontSize: 12),
             ),
           );

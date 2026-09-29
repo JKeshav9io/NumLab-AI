@@ -41,9 +41,11 @@ class SolverRemoteDataSourceImpl implements SolverRemoteDataSource {
     required Map<String, dynamic> payload,
     String? accessToken,
   }) async {
+    final sanitizedPayload = SolverMethodConfig.sanitizePayload(payload);
+
     final response = await _dio.post<Map<String, dynamic>>(
       config.endpoint,
-      data: payload,
+      data: sanitizedPayload,
       options: _buildOptions(accessToken),
     );
 

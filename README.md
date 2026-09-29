@@ -141,7 +141,7 @@ Backend configuration variables are managed in `numlab-backend/.env`. Refer to [
 *(Never commit active `.env` files to source control).*
 
 ### Frontend Configuration
-The frontend targets `http://10.0.2.2:3000/api/v1` on Android emulators and `http://localhost:3000/api/v1` on iOS simulators and desktop by default. Custom endpoints can be passed at compile/run time via `--dart-define=API_BASE_URL=<url>`.
+The frontend targets `http://192.168.1.36:3000/api/v1` on physical Android devices (e.g. Pixel 8 Pro over wireless debugging), `http://10.0.2.2:3000/api/v1` on Android emulators, and `http://localhost:3000/api/v1` on iOS simulators, web, and desktop by default. Custom endpoints can be passed at compile/run time via `--dart-define=API_BASE_URL=<url>` or `--dart-define-from-file=.env`.
 
 ---
 

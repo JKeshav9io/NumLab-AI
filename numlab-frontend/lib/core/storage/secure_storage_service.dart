@@ -40,28 +40,58 @@ class SecureStorageServiceImpl implements SecureStorageService {
     required String accessToken,
     required String refreshToken,
   }) async {
-    await Future.wait([
-      _storage.write(key: _accessTokenKey, value: accessToken),
-      _storage.write(key: _refreshTokenKey, value: refreshToken),
-    ]);
+    try {
+      await Future.wait([
+        _storage.write(key: _accessTokenKey, value: accessToken),
+        _storage.write(key: _refreshTokenKey, value: refreshToken),
+      ]);
+    } on Object catch (_) {
+      try {
+        await _storage.deleteAll();
+        await Future.wait([
+          _storage.write(key: _accessTokenKey, value: accessToken),
+          _storage.write(key: _refreshTokenKey, value: refreshToken),
+        ]);
+      } on Object catch (_) {
+        // Silently handle if secure hardware storage is temporarily unavailable
+      }
+    }
   }
 
   @override
   Future<String?> getAccessToken() async {
-    return _storage.read(key: _accessTokenKey);
+    try {
+      return await _storage.read(key: _accessTokenKey);
+    } on Object catch (_) {
+      await clearTokens();
+      return null;
+    }
   }
 
   @override
   Future<String?> getRefreshToken() async {
-    return _storage.read(key: _refreshTokenKey);
+    try {
+      return await _storage.read(key: _refreshTokenKey);
+    } on Object catch (_) {
+      await clearTokens();
+      return null;
+    }
   }
 
   @override
   Future<void> clearTokens() async {
-    await Future.wait([
-      _storage.delete(key: _accessTokenKey),
-      _storage.delete(key: _refreshTokenKey),
-    ]);
+    try {
+      await Future.wait([
+        _storage.delete(key: _accessTokenKey),
+        _storage.delete(key: _refreshTokenKey),
+      ]);
+    } on Object catch (_) {
+      try {
+        await _storage.deleteAll();
+      } on Object catch (_) {
+        // Silently handle if storage deletion fails
+      }
+    }
   }
 
   @override

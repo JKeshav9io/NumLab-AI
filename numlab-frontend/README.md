@@ -58,10 +58,16 @@ flutter run
 - The **backend Express server** runs on port `3000` (`http://localhost:3000`).
 - The **Flutter frontend** does not occupy port `3000`:
   - **Mobile (Android / iOS) & Desktop**: Runs as a compiled native application (no local listening port needed). It connects outbound to the backend.
+    - Android Physical Device (Pixel 8 Pro over Wi-Fi / Wireless Debugging): `http://192.168.1.36:3000/api/v1`
     - Android Emulator target: `http://10.0.2.2:3000/api/v1` (resolved automatically)
     - iOS Simulator / Windows Desktop: `http://localhost:3000/api/v1` (resolved automatically)
   - **Flutter Web**: Runs on its own separate web server port (e.g. `flutter run -d chrome --web-port=8080`) and makes API calls to the backend on `http://localhost:3000/api/v1`.
-- To override the backend endpoint at runtime, use `--dart-define`:
+- To override the backend endpoint or target the physical device at runtime, use `--dart-define` or `--dart-define-from-file`:
   ```bash
-  flutter run --dart-define=API_BASE_URL=http://localhost:3000/api/v1
+  # Target wireless physical device:
+  flutter run --dart-define=API_BASE_URL=http://192.168.1.36:3000/api/v1
+  # Or using .env configuration:
+  flutter run --dart-define-from-file=.env
+  # Target emulator:
+  flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1
   ```

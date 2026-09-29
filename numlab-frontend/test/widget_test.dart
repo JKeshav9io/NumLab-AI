@@ -19,7 +19,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('NumLab AI'), findsOneWidget);
-    expect(find.text('Numerical Solvers'), findsOneWidget);
-    expect(find.text('All (27)'), findsOneWidget);
+    expect(find.text('Numerical Solver Workspaces'), findsOneWidget);
+    expect(find.text('Categories (6)'), findsOneWidget);
   });
 }
