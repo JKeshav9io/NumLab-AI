@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:numlab_frontend/features/solvers/domain/entities/solver_explanation.dart';
+import 'package:numlab_frontend/features/solvers/domain/entities/solver_graph_data.dart';
 
 /// Generic domain entity representing the calculation result of a numerical solver execution.
 ///
@@ -14,6 +15,7 @@ class SolverResult extends Equatable {
     this.iterations = const [],
     this.explanation,
     this.graphData,
+    this.typedGraphData,
     this.warnings = const [],
     this.executionTimeMs = 0,
     this.requestId,
@@ -40,6 +42,9 @@ class SolverResult extends Equatable {
 
   /// Optional 2D curve and iteration point coordinates for plotting.
   final dynamic graphData;
+
+  /// Optional strongly-typed graph plotting data entity.
+  final SolverGraphData? typedGraphData;
 
   /// Non-fatal mathematical warnings (e.g. non-diagonally dominant matrix).
   final List<String> warnings;
@@ -122,9 +127,10 @@ class SolverResult extends Equatable {
 
   /// Whether the result contains graphable data.
   bool get hasGraphData =>
-      graphData != null &&
-      (graphData is! List || (graphData as List).isNotEmpty) &&
-      (graphData is! Map || (graphData as Map).isNotEmpty);
+      (typedGraphData != null && typedGraphData!.isNotEmpty) ||
+      (graphData != null &&
+          (graphData is! List || (graphData as List).isNotEmpty) &&
+          (graphData is! Map || (graphData as Map).isNotEmpty));
 
   /// Whether the result contains an explanation.
   bool get hasExplanation =>
@@ -146,6 +152,7 @@ class SolverResult extends Equatable {
     finalAnswer,
     explanation,
     graphData,
+    typedGraphData,
     warnings,
     executionTimeMs,
     requestId,

@@ -1,3 +1,4 @@
+import 'package:numlab_frontend/features/solvers/data/models/solver_graph_data_model.dart';
 import 'package:numlab_frontend/features/solvers/domain/entities/solver_explanation.dart';
 import 'package:numlab_frontend/features/solvers/domain/entities/solver_result.dart';
 
@@ -52,6 +53,7 @@ class SolverResultModel extends SolverResult {
     super.iterations = const [],
     super.explanation,
     super.graphData,
+    super.typedGraphData,
     super.warnings = const [],
     super.executionTimeMs = 0,
     super.requestId,
@@ -120,6 +122,9 @@ class SolverResultModel extends SolverResult {
       finalAnswer = data['result'] as Map<String, dynamic>;
     }
 
+    final rawGraphData = data['graphData'];
+    final typedGraphData = SolverGraphDataModel.fromDynamic(rawGraphData);
+
     return SolverResultModel(
       method: data['method'] as String? ?? '',
       status: data['status'] as String?,
@@ -131,7 +136,8 @@ class SolverResultModel extends SolverResult {
           : const [],
       finalAnswer: finalAnswer,
       explanation: explanation,
-      graphData: data['graphData'],
+      graphData: rawGraphData,
+      typedGraphData: typedGraphData,
       warnings: warnings,
       executionTimeMs: executionTime,
       requestId: requestId,
@@ -153,6 +159,9 @@ class SolverResultModel extends SolverResult {
                 : SolverExplanationModel.fromEntity(entity.explanation!))
           : null,
       graphData: entity.graphData,
+      typedGraphData:
+          entity.typedGraphData ??
+          SolverGraphDataModel.fromDynamic(entity.graphData),
       warnings: entity.warnings,
       executionTimeMs: entity.executionTimeMs,
       requestId: entity.requestId,
@@ -173,6 +182,7 @@ class SolverResultModel extends SolverResult {
               : explanation)
         : null,
     graphData: graphData,
+    typedGraphData: typedGraphData,
     warnings: warnings,
     executionTimeMs: executionTimeMs,
     requestId: requestId,
