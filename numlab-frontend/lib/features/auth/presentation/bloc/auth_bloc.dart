@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fpdart/fpdart.dart';
 import 'package:numlab_frontend/core/error/failures.dart';
 import 'package:numlab_frontend/core/storage/secure_storage_service.dart';
+import 'package:numlab_frontend/features/auth/domain/entities/user.dart';
 import 'package:numlab_frontend/features/auth/domain/usecases/usecases.dart';
 import 'package:numlab_frontend/features/auth/presentation/bloc/auth_event.dart';
 import 'package:numlab_frontend/features/auth/presentation/bloc/auth_state.dart';
@@ -41,10 +43,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LogoutAllUseCase _logoutAllUseCase;
   final GetCurrentUserUseCase _getCurrentUserUseCase;
 
+  Future<Either<Failure, User>>? _inFlightCurrentUserFuture;
+
+  Future<Either<Failure, User>> _fetchCurrentUserSingleFlight() {
+    final activeFuture = _inFlightCurrentUserFuture;
+    if (activeFuture != null) {
+      return activeFuture;
+    }
+    final future = _getCurrentUserUseCase();
+    _inFlightCurrentUserFuture = future;
+    return future.whenComplete(() {
+      _inFlightCurrentUserFuture = null;
+    });
+  }
+
   Future<void> _onInitializeRequested(
     AuthInitializeRequested event,
     Emitter<AuthState> emit,
   ) async {
+    if (state is AuthLoading) {
+      return;
+    }
     emit(const AuthLoading());
 
     final hasRefreshToken = await _secureStorageService.hasRefreshToken();
@@ -53,7 +72,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       return;
     }
 
-    final userResult = await _getCurrentUserUseCase();
+    final userResult = await _fetchCurrentUserSingleFlight();
     await userResult.fold(
       (failure) async {
         if (failure is AuthFailure) {
@@ -179,7 +198,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           refreshToken: token.refreshToken,
         );
 
-        final userResult = await _getCurrentUserUseCase();
+        final userResult = await _fetchCurrentUserSingleFlight();
         userResult.fold(
           (failure) {
             emit(AuthError(failure: failure));
@@ -196,9 +215,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     AuthGetCurrentUserRequested event,
     Emitter<AuthState> emit,
   ) async {
+    if (state is AuthLoading && _inFlightCurrentUserFuture == null) {
+      return;
+    }
     emit(const AuthLoading());
 
-    final userResult = await _getCurrentUserUseCase();
+    final userResult = await _fetchCurrentUserSingleFlight();
     await userResult.fold(
       (failure) async {
         if (failure is AuthFailure) {

@@ -121,5 +121,52 @@ void main() {
         expect(await storageService.hasRefreshToken(), isTrue);
       },
     );
+
+    test('recovers gracefully and clears tokens if read throws decryption exception', () async {
+      final failingStorage = _FailingFlutterSecureStorage();
+      final failingService = SecureStorageServiceImpl(storage: failingStorage);
+
+      final token = await failingService.getAccessToken();
+      expect(token, isNull);
+
+      final refresh = await failingService.getRefreshToken();
+      expect(refresh, isNull);
+    });
   });
+}
+
+class _FailingFlutterSecureStorage extends Fake implements FlutterSecureStorage {
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    throw Exception('javax.crypto.BadPaddingException: Decryption failed');
+  }
+
+  @override
+  Future<void> delete({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {}
+
+  @override
+  Future<void> deleteAll({
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {}
 }

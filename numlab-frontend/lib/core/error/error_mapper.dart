@@ -77,9 +77,9 @@ Failure mapExceptionToFailure(Object exception, [StackTrace? stackTrace]) {
               );
             }
 
-            // 4. Default Server Failure with backend code
+            // 4. Default Server Failure with backend code and friendly message presentation
             return ServerFailure(
-              message: message,
+              message: _formatFriendlySolverMessage(code, message),
               code: code,
               statusCode: response.statusCode,
             );
@@ -108,4 +108,26 @@ Failure mapExceptionToFailure(Object exception, [StackTrace? stackTrace]) {
   return ServerFailure(
     message: exception.toString(),
   );
+}
+
+String _formatFriendlySolverMessage(String code, String rawMessage) {
+  if (code == 'SOLVER_PRECONDITION_FAILED') {
+    if (rawMessage.isEmpty || rawMessage == code) {
+      return 'Solver precondition failed. Please check that initial bounds or inputs satisfy the algorithm requirements.';
+    }
+    return rawMessage;
+  }
+  if (code == 'SINGULAR_MATRIX' || code == 'SOLVER_SINGULAR_MATRIX') {
+    return 'The system matrix is singular (determinant is zero) and has no unique solution.';
+  }
+  if (code == 'SOLVER_MAX_ITERATIONS_EXCEEDED') {
+    return 'Maximum iterations exceeded without reaching convergence tolerance.';
+  }
+  if (code == 'SOLVER_DIVERGENCE' || code == 'SOLVER_DIVERGED') {
+    return 'Calculation diverged. Try adjusting initial guesses or step size.';
+  }
+  if (code == 'ZERO_DIVISION' || code == 'DIVISION_BY_ZERO') {
+    return 'Division by zero occurred during calculation.';
+  }
+  return rawMessage;
 }

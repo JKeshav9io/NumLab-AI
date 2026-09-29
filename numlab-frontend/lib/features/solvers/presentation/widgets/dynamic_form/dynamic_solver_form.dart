@@ -141,6 +141,7 @@ class DynamicSolverForm extends StatelessWidget {
                 onPressed: state.isSubmitting
                     ? null
                     : () {
+                        FocusScope.of(context).unfocus();
                         context.read<SolverFormBloc>().add(
                           const SolverFormSubmitted(),
                         );

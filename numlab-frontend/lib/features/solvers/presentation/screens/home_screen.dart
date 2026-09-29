@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -10,30 +8,19 @@ import 'package:numlab_frontend/core/theme/app_typography.dart';
 import 'package:numlab_frontend/features/auth/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/solvers/domain/models/models.dart';
 
-/// Main functional landing and solver selection screen.
+/// Main functional landing screen for NumLab AI.
 ///
 /// Features:
-/// - Category filtering for all 6 numerical solver categories.
-/// - Dynamic listing of all 27 solvers sourced directly from [SolverMethodRegistry].
-/// - Tap-to-navigate solver launching to the solver form pipeline.
+/// - Category-first entry point for all 6 numerical solver domains:
+///   Root Finding, Linear Systems, Interpolation, ODE, Numerical Integration, and Differentiation.
+/// - Tap-to-navigate opening the interactive Category Workspace for each category.
 /// - Integrated user session status banner and navigation to auth flows.
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  SolverCategory? _selectedCategory;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final solvers = _selectedCategory == null
-        ? SolverMethodRegistry.all
-        : SolverMethodRegistry.getByCategory(_selectedCategory!);
 
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
@@ -63,65 +50,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // Header Title
                   Text(
-                    'Numerical Solvers',
+                    'Numerical Solver Workspaces',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    'Select an algorithm category or choose from all 27 solvers below.',
+                    'Select a mathematical category to open its interactive solver workspace.',
                     style: AppTypography.bodyMedium.copyWith(
                       color: isDark ? Colors.grey[400] : Colors.grey[700],
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
 
-                  // Category Filter Chips
-                  _buildCategoryFilterSection(),
-                  const SizedBox(height: AppSpacing.md),
-
-                  // Solvers Count & Heading
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _selectedCategory == null
-                            ? 'All Solvers (${solvers.length})'
-                            : '${_selectedCategory!.displayName} (${solvers.length})',
-                        key: const Key('solvers_count_text'),
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      if (_selectedCategory != null)
-                        TextButton(
-                          key: const Key('clear_filter_button'),
-                          onPressed: () =>
-                              setState(() => _selectedCategory = null),
-                          child: const Text('Show All'),
-                        ),
-                    ],
+                  // Categories Heading & Count
+                  Text(
+                    'Categories (${SolverCategory.values.length})',
+                    key: const Key('solvers_count_text'),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
 
-                  // Solvers List
-                  if (solvers.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
-                      child: Center(
-                        child: Text(
-                          'No solvers found in this category.',
-                          key: Key('empty_solvers_text'),
-                          style: AppTypography.bodyMedium,
-                        ),
-                      ),
-                    )
-                  else
-                    ...solvers.map(
-                      (solver) => _buildSolverCard(context, solver, isDark),
-                    ),
+                  // Category Cards List
+                  ...SolverCategory.values.map(
+                    (category) => _buildCategoryCard(context, category, isDark),
+                  ),
                 ],
               ),
             ),
@@ -131,73 +87,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCategoryFilterSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Categories',
-          style: AppTypography.labelSmall,
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              ChoiceChip(
-                key: const Key('category_chip_all'),
-                label: const Text('All (27)'),
-                selected: _selectedCategory == null,
-                onSelected: (selected) {
-                  if (selected) {
-                    setState(() => _selectedCategory = null);
-                  }
-                },
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              ...SolverCategory.values.map((category) {
-                final categorySolversCount = SolverMethodRegistry.getByCategory(
-                  category,
-                ).length;
-                final isSelected = _selectedCategory == category;
-
-                return Padding(
-                  padding: const EdgeInsets.only(right: AppSpacing.xs),
-                  child: ChoiceChip(
-                    key: Key('category_chip_${category.id}'),
-                    label: Text(
-                      '${category.displayName} ($categorySolversCount)',
-                    ),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      setState(() {
-                        _selectedCategory = selected ? category : null;
-                      });
-                    },
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSolverCard(
+  Widget _buildCategoryCard(
     BuildContext context,
-    SolverMethodConfig solver,
+    SolverCategory category,
     bool isDark,
   ) {
+    final methods = SolverMethodRegistry.getByCategory(category);
+
     return Card(
-      key: Key('solver_card_${solver.id}'),
+      key: Key('category_card_${category.id}'),
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       elevation: 1,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       ),
       child: ListTile(
-        key: Key('solver_tile_${solver.id}'),
+        key: Key('category_tile_${category.id}'),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.xs,
@@ -205,14 +110,14 @@ class _HomeScreenState extends State<HomeScreen> {
         leading: CircleAvatar(
           backgroundColor: AppColors.primary.withValues(alpha: 0.12),
           child: Icon(
-            _getCategoryIcon(solver.category),
+            _getCategoryIcon(category),
             color: AppColors.primary,
-            size: 20,
+            size: 22,
           ),
         ),
         title: Text(
-          solver.name,
-          key: Key('solver_title_${solver.id}'),
+          category.displayName,
+          key: Key('category_title_${category.id}'),
           style: AppTypography.titleMedium.copyWith(
             fontWeight: FontWeight.bold,
             fontSize: 15,
@@ -223,8 +128,8 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             const SizedBox(height: AppSpacing.xs),
             Text(
-              solver.description,
-              key: Key('solver_desc_${solver.id}'),
+              category.description,
+              key: Key('category_desc_${category.id}'),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppTypography.bodyMedium.copyWith(
@@ -245,17 +150,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
                   ),
                   child: Text(
-                    solver.category.displayName,
-                    key: Key('solver_category_badge_${solver.id}'),
+                    '${methods.length} methods',
+                    key: Key('category_methods_badge_${category.id}'),
                     style: AppTypography.labelSmall.copyWith(fontSize: 11),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  '${solver.fields.length} inputs',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: isDark ? Colors.grey[500] : Colors.grey[600],
-                    fontSize: 11,
                   ),
                 ),
               ],
@@ -264,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         trailing: const Icon(Icons.chevron_right, size: 20),
         onTap: () {
-          unawaited(context.push(AppRoutes.solver(solver.id)));
+          context.go(AppRoutes.workspace(category.id));
         },
       ),
     );

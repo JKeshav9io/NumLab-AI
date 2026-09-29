@@ -31,6 +31,7 @@ class SolverFormState extends Equatable {
     this.config,
     this.values = const {},
     this.fieldErrors = const {},
+    this.touchedFields = const {},
     this.result,
     this.failure,
   });
@@ -46,6 +47,9 @@ class SolverFormState extends Equatable {
 
   /// Current validation errors `{fieldNameOrRuleId: errorMessage}`.
   final Map<String, String> fieldErrors;
+
+  /// Set of field keys that the user has interacted with or modified.
+  final Set<String> touchedFields;
 
   /// Calculation result from successful execution.
   final SolverResult? result;
@@ -102,6 +106,7 @@ class SolverFormState extends Equatable {
     bool clearConfig = false,
     Map<String, dynamic>? values,
     Map<String, String>? fieldErrors,
+    Set<String>? touchedFields,
     SolverResult? result,
     bool clearResult = false,
     Failure? failure,
@@ -112,6 +117,7 @@ class SolverFormState extends Equatable {
       config: clearConfig ? null : (config ?? this.config),
       values: values ?? this.values,
       fieldErrors: fieldErrors ?? this.fieldErrors,
+      touchedFields: touchedFields ?? this.touchedFields,
       result: clearResult ? null : (result ?? this.result),
       failure: clearFailure ? null : (failure ?? this.failure),
     );
@@ -123,6 +129,7 @@ class SolverFormState extends Equatable {
     config,
     values,
     fieldErrors,
+    touchedFields,
     result,
     failure,
   ];

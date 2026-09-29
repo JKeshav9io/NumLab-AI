@@ -263,6 +263,35 @@ void main() {
           await expectation;
         },
       );
+
+      test(
+        'deduplicates concurrent cold-start requests into a single-flight GetCurrentUser call',
+        () async {
+          mockStorage.refreshToken = 'persisted_refresh_jwt';
+          var callCount = 0;
+          mockGetCurrentUserUseCase.handler = ({accessToken}) async {
+            callCount++;
+            await Future<void>.delayed(const Duration(milliseconds: 50));
+            return Right(tUser);
+          };
+
+          final expectation = expectLater(
+            authBloc.stream,
+            emitsInOrder(<AuthState>[
+              const AuthLoading(),
+              AuthAuthenticated(user: tUser),
+            ]),
+          );
+
+          // Dispatch both events at startup concurrently
+          authBloc
+            ..add(const AuthInitializeRequested())
+            ..add(const AuthGetCurrentUserRequested());
+
+          await expectation;
+          expect(callCount, equals(1));
+        },
+      );
     });
 
     group('AuthLoginRequested', () {

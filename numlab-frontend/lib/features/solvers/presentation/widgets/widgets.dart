@@ -1,3 +1,4 @@
+export 'charts/charts.dart';
 export 'dynamic_form/dynamic_boolean_field.dart';
 export 'dynamic_form/dynamic_matrix_field.dart';
 export 'dynamic_form/dynamic_point_list_field.dart';

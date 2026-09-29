@@ -66,147 +66,51 @@ void main() {
     );
   }
 
-  group('HomeScreen Category & Solver Listing Tests', () {
+  group('HomeScreen Category Navigation Tests', () {
     setUp(() {
       mockAuthBloc = MockAuthBloc(const AuthUnauthenticated());
     });
 
-    testWidgets('loads all 6 registered categories and All chip', (
+    testWidgets('loads all 6 registered category cards with correct method counts', (
       tester,
     ) async {
       await tester.pumpWidget(buildHomeScreen());
       await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('category_chip_all')), findsOneWidget);
-      expect(find.text('All (27)'), findsOneWidget);
+      expect(find.text('Numerical Solver Workspaces'), findsOneWidget);
+      expect(find.text('Categories (6)'), findsOneWidget);
 
       for (final category in SolverCategory.values) {
         expect(
-          find.byKey(Key('category_chip_${category.id}')),
+          find.byKey(Key('category_card_${category.id}')),
           findsOneWidget,
         );
+        expect(find.text(category.displayName), findsOneWidget);
         final count = SolverMethodRegistry.getByCategory(category).length;
-        expect(find.text('${category.displayName} ($count)'), findsOneWidget);
+        final badge = find.byKey(Key('category_methods_badge_${category.id}'));
+        expect(badge, findsOneWidget);
+        final badgeWidget = tester.widget<Text>(badge);
+        expect(badgeWidget.data, equals('$count methods'));
       }
     });
 
-    testWidgets(
-      'displays all 27 solvers from SolverMethodRegistry by default',
-      (
-        tester,
-      ) async {
-        await tester.pumpWidget(buildHomeScreen());
-        await tester.pumpAndSettle();
-
-        expect(find.text('All Solvers (27)'), findsOneWidget);
-
-        // Verify all 27 registered solvers are in the registry and displayed
-        expect(SolverMethodRegistry.all.length, equals(27));
-        for (final solver in SolverMethodRegistry.all) {
-          expect(find.byKey(Key('solver_card_${solver.id}')), findsOneWidget);
-          expect(find.text(solver.name), findsOneWidget);
-        }
-      },
-    );
-
-    testWidgets('filters solvers accurately across each individual category', (
+    testWidgets('each category card has correct title, description, and badge', (
       tester,
     ) async {
       await tester.pumpWidget(buildHomeScreen());
       await tester.pumpAndSettle();
 
       for (final category in SolverCategory.values) {
-        final categoryChipFinder = find.byKey(
-          Key('category_chip_${category.id}'),
-        );
-        await tester.ensureVisible(categoryChipFinder);
-        await tester.tap(categoryChipFinder);
-        await tester.pumpAndSettle();
+        final cardFinder = find.byKey(Key('category_card_${category.id}'));
+        await tester.ensureVisible(cardFinder);
 
-        final expectedSolvers = SolverMethodRegistry.getByCategory(category);
+        expect(find.byKey(Key('category_title_${category.id}')), findsOneWidget);
+        expect(find.byKey(Key('category_desc_${category.id}')), findsOneWidget);
         expect(
-          tester.widget<Text>(find.byKey(const Key('solvers_count_text'))).data,
-          equals('${category.displayName} (${expectedSolvers.length})'),
+          find.byKey(Key('category_methods_badge_${category.id}')),
+          findsOneWidget,
         );
-
-        // Expected solvers in this category must be present
-        for (final solver in expectedSolvers) {
-          expect(find.byKey(Key('solver_card_${solver.id}')), findsOneWidget);
-        }
-
-        // Solvers in other categories must NOT be present
-        for (final otherSolver in SolverMethodRegistry.all) {
-          if (otherSolver.category != category) {
-            expect(
-              find.byKey(Key('solver_card_${otherSolver.id}')),
-              findsNothing,
-            );
-          }
-        }
       }
-    });
-
-    testWidgets('clearing category filter restores all 27 solvers', (
-      tester,
-    ) async {
-      await tester.pumpWidget(buildHomeScreen());
-      await tester.pumpAndSettle();
-
-      // Select root finding category (4 solvers)
-      final rootChip = find.byKey(
-        Key('category_chip_${SolverCategory.rootFinding.id}'),
-      );
-      await tester.ensureVisible(rootChip);
-      await tester.tap(rootChip);
-      await tester.pumpAndSettle();
-      expect(
-        tester.widget<Text>(find.byKey(const Key('solvers_count_text'))).data,
-        equals('${SolverCategory.rootFinding.displayName} (4)'),
-      );
-
-      // Tap 'Show All' clear button
-      expect(find.byKey(const Key('clear_filter_button')), findsOneWidget);
-      await tester.tap(find.byKey(const Key('clear_filter_button')));
-      await tester.pumpAndSettle();
-
-      // Restored to all 27
-      expect(
-        tester.widget<Text>(find.byKey(const Key('solvers_count_text'))).data,
-        equals('All Solvers (27)'),
-      );
-      for (final solver in SolverMethodRegistry.all) {
-        expect(find.byKey(Key('solver_card_${solver.id}')), findsOneWidget);
-      }
-    });
-
-    testWidgets('tapping All chip resets any active category filter', (
-      tester,
-    ) async {
-      await tester.pumpWidget(buildHomeScreen());
-      await tester.pumpAndSettle();
-
-      // Select ODE category
-      final odeChip = find.byKey(
-        Key('category_chip_${SolverCategory.ode.id}'),
-      );
-      await tester.ensureVisible(odeChip);
-      await tester.tap(odeChip);
-      await tester.pumpAndSettle();
-      expect(
-        tester.widget<Text>(find.byKey(const Key('solvers_count_text'))).data,
-        equals('${SolverCategory.ode.displayName} (4)'),
-      );
-
-      // Tap 'All (27)' chip
-      final allChip = find.byKey(const Key('category_chip_all'));
-      await tester.ensureVisible(allChip);
-      await tester.tap(allChip);
-      await tester.pumpAndSettle();
-
-      expect(
-        tester.widget<Text>(find.byKey(const Key('solvers_count_text'))).data,
-        equals('All Solvers (27)'),
-      );
     });
   });
 
@@ -317,8 +221,8 @@ void main() {
     );
   });
 
-  group('HomeScreen Solver Selection & Navigation Integration Tests', () {
-    testWidgets('tapping solver card navigates to /solver/:solverId route', (
+  group('HomeScreen Category Selection & Navigation Integration Tests', () {
+    testWidgets('tapping category card navigates to /workspace/:categoryId route', (
       tester,
     ) async {
       mockAuthBloc = MockAuthBloc(const AuthUnauthenticated());
@@ -335,12 +239,12 @@ void main() {
             ),
           ),
           GoRoute(
-            path: '${AppRoutes.solverPrefix}/:solverId',
+            path: '${AppRoutes.workspacePrefix}/:categoryId',
             builder: (context, state) {
               pushedRoute = state.uri.toString();
               return Scaffold(
                 body: Text(
-                  'Solver Screen: ${state.pathParameters['solverId']}',
+                  'Workspace: ${state.pathParameters['categoryId']}',
                 ),
               );
             },
@@ -351,24 +255,26 @@ void main() {
       await tester.pumpWidget(MaterialApp.router(routerConfig: router));
       await tester.pumpAndSettle();
 
-      // Tap on Bisection Method
-      final bisectionCard = find.byKey(const Key('solver_card_bisection'));
-      expect(bisectionCard, findsOneWidget);
-      await tester.tap(bisectionCard);
+      // Tap on Root Finding Category Card
+      final rootCard = find.byKey(
+        Key('category_card_${SolverCategory.rootFinding.id}'),
+      );
+      expect(rootCard, findsOneWidget);
+      await tester.tap(rootCard);
       await tester.pumpAndSettle();
 
-      expect(pushedRoute, equals('/solver/bisection'));
-      expect(find.text('Solver Screen: bisection'), findsOneWidget);
+      expect(pushedRoute, equals('/workspace/root-finding'));
+      expect(find.text('Workspace: root-finding'), findsOneWidget);
     });
 
     testWidgets(
-      'all 27 numerical solvers can be tapped and reach their solver route',
+      'all 6 solver categories can be tapped and reach their workspace route',
       (
         tester,
       ) async {
         mockAuthBloc = MockAuthBloc(const AuthUnauthenticated());
 
-        final visitedSolvers = <String>[];
+        final visitedCategories = <String>[];
         final router = GoRouter(
           initialLocation: AppRoutes.home,
           routes: [
@@ -380,19 +286,11 @@ void main() {
               ),
             ),
             GoRoute(
-              path: '${AppRoutes.solverPrefix}/:solverId',
+              path: '${AppRoutes.workspacePrefix}/:categoryId',
               builder: (context, state) {
-                final id = state.pathParameters['solverId']!;
-                visitedSolvers.add(id);
-                return Scaffold(
-                  appBar: AppBar(
-                    leading: IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () => context.pop(),
-                    ),
-                  ),
-                  body: Text('Solver: $id'),
-                );
+                final id = state.pathParameters['categoryId']!;
+                visitedCategories.add(id);
+                return Scaffold(body: Text('Workspace: $id'));
               },
             ),
           ],
@@ -401,23 +299,23 @@ void main() {
         await tester.pumpWidget(MaterialApp.router(routerConfig: router));
         await tester.pumpAndSettle();
 
-        for (final solver in SolverMethodRegistry.all) {
-          final card = find.byKey(Key('solver_card_${solver.id}'));
+        for (final category in SolverCategory.values) {
+          final card = find.byKey(Key('category_card_${category.id}'));
           await tester.ensureVisible(card);
           await tester.tap(card);
           await tester.pumpAndSettle();
 
-          expect(find.text('Solver: ${solver.id}'), findsOneWidget);
+          expect(find.text('Workspace: ${category.id}'), findsOneWidget);
 
-          // Pop back to home
-          await tester.tap(find.byType(IconButton).first);
+          // Navigate back to home (context.go replaces the stack, so use go not pop)
+          router.go(AppRoutes.home);
           await tester.pumpAndSettle();
         }
 
-        expect(visitedSolvers.length, equals(27));
+        expect(visitedCategories.length, equals(6));
         expect(
-          visitedSolvers,
-          containsAll(SolverMethodRegistry.all.map((s) => s.id)),
+          visitedCategories,
+          containsAll(SolverCategory.values.map((c) => c.id)),
         );
       },
     );

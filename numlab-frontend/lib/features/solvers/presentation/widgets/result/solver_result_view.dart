@@ -3,6 +3,7 @@ import 'package:numlab_frontend/core/theme/app_colors.dart';
 import 'package:numlab_frontend/core/theme/app_spacing.dart';
 import 'package:numlab_frontend/core/theme/app_typography.dart';
 import 'package:numlab_frontend/features/solvers/domain/entities/solver_result.dart';
+import 'package:numlab_frontend/features/solvers/presentation/widgets/charts/charts.dart';
 import 'package:numlab_frontend/features/solvers/presentation/widgets/result/solver_explanation_view.dart';
 import 'package:numlab_frontend/features/solvers/presentation/widgets/result/solver_final_answer_view.dart';
 import 'package:numlab_frontend/features/solvers/presentation/widgets/result/solver_iterations_view.dart';
@@ -15,9 +16,10 @@ import 'package:numlab_frontend/features/solvers/presentation/widgets/result/sol
 /// - Status and convergence indicator.
 /// - Primary mathematical metric callouts (root, scalar value, solution vector, error).
 /// - Comprehensive `finalAnswer` key-value breakdown for arbitrary shapes.
+/// - Interactive 2D graph visualization with RepaintBoundary isolation.
 /// - Step-by-step mathematical/AI explanation.
 /// - Tabular iteration steps breakdown.
-/// - Graph-data availability indicator (without rendering graph canvas).
+/// - Graph-data availability indicator.
 /// - Non-fatal solver warning alerts.
 /// - Modular design suitable for direct reuse in History views.
 class SolverResultView extends StatelessWidget {
@@ -65,11 +67,15 @@ class SolverResultView extends StatelessWidget {
                   size: 22,
                 ),
                 const SizedBox(width: AppSpacing.xs),
-                Text(
-                  'Calculation Result',
-                  style: AppTypography.titleMedium.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: isConverged ? AppColors.success : null,
+                Expanded(
+                  child: Text(
+                    'Calculation Result',
+                    style: AppTypography.titleMedium.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: isConverged ? AppColors.success : null,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -186,11 +192,22 @@ class SolverResultView extends StatelessWidget {
             // 5. Generic Final Answer Key-Value Breakdown
             SolverFinalAnswerView(finalAnswer: result.finalAnswer),
 
-            // 6. Iteration History Table
+            // 6. Interactive Graph Visualization
+            if (result.hasGraphData)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.md),
+                child: SolverChartView(
+                  graphData: result.typedGraphData,
+                  rawGraphData: result.graphData,
+                  title: '${result.method} Graph',
+                ),
+              ),
+
+            // 7. Iteration History Table
             if (result.hasIterations)
               SolverIterationsView(iterations: result.iterations),
 
-            // 7. Step-by-Step Explanation
+            // 8. Step-by-Step Explanation
             if (result.hasExplanation)
               SolverExplanationView(explanation: result.explanation!),
 
@@ -203,21 +220,32 @@ class SolverResultView extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     if (result.requestId != null)
-                      Text(
-                        'Req: ${result.requestId}',
-                        style: AppTypography.labelSmall.copyWith(
-                          color: isDark
-                              ? AppColors.darkTextSecondary
-                              : AppColors.lightTextSecondary,
+                      Expanded(
+                        child: Text(
+                          'Req: ${result.requestId}',
+                          style: AppTypography.labelSmall.copyWith(
+                            color: isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.lightTextSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                    if (result.requestId != null && result.timestamp != null)
+                      const SizedBox(width: AppSpacing.sm),
                     if (result.timestamp != null)
-                      Text(
-                        result.timestamp!,
-                        style: AppTypography.labelSmall.copyWith(
-                          color: isDark
-                              ? AppColors.darkTextSecondary
-                              : AppColors.lightTextSecondary,
+                      Flexible(
+                        child: Text(
+                          result.timestamp!,
+                          textAlign: TextAlign.end,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.lightTextSecondary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                   ],
