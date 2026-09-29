@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:numlab_frontend/core/error/failures.dart';
 import 'package:numlab_frontend/features/solvers/domain/entities/entities.dart';
+import 'package:numlab_frontend/features/solvers/domain/models/models.dart';
 import 'package:numlab_frontend/features/solvers/domain/usecases/usecases.dart';
 import 'package:numlab_frontend/features/solvers/presentation/bloc/bloc.dart';
 
@@ -832,6 +835,257 @@ void main() {
           final state = await bloc.stream.firstWhere((s) => s.isSuccess);
 
           expect(state.result?.resultValue, 4.0);
+        },
+      );
+    });
+
+    group('Method Switching & Workspace State-Safety', () {
+      test(
+        'compatible values are preserved when key AND input type match, obsolete fields dropped, new fields get defaults',
+        () async {
+          bloc.add(const SolverFormLoadStarted(solverId: 'bisection'));
+          await bloc.stream.firstWhere(
+            (s) => s.isReady && s.config?.id == 'bisection',
+          );
+
+          // User modifies equation and tolerance
+          bloc.add(
+            const SolverFormFieldChanged(
+              fieldName: 'equation',
+              value: 'x^3 - 8',
+            ),
+          );
+          await bloc.stream.firstWhere((s) => s.values['equation'] == 'x^3 - 8');
+
+          bloc.add(
+            const SolverFormFieldChanged(
+              fieldName: 'tolerance',
+              value: 0.00005,
+            ),
+          );
+          await bloc.stream.firstWhere((s) => s.values['tolerance'] == 0.00005);
+
+          // Switch to Newton-Raphson
+          bloc.add(
+            const SolverFormMethodSwitched(solverId: 'newton-raphson'),
+          );
+
+          final switchedState = await bloc.stream.firstWhere(
+            (s) => s.config?.id == 'newton-raphson',
+          );
+
+          // 1. Compatible fields preserved: equation & tolerance
+          expect(switchedState.values['equation'], equals('x^3 - 8'));
+          expect(switchedState.values['tolerance'], equals(0.00005));
+
+          // 2. Obsolete fields dropped: lowerBound and upperBound
+          expect(switchedState.values.containsKey('lowerBound'), isFalse);
+          expect(switchedState.values.containsKey('upperBound'), isFalse);
+
+          // 3. New fields receive schema defaults: initialGuess
+          final nrConfig = SolverMethodRegistry.getById('newton-raphson')!;
+          final expectedInitialGuessDefault =
+              nrConfig.getField('initialGuess')?.defaultValue;
+          expect(
+            switchedState.values['initialGuess'],
+            equals(expectedInitialGuessDefault),
+          );
+
+          // 4. Untouched fields are not flagged with errors
+          expect(switchedState.fieldErrors, isEmpty);
+        },
+      );
+
+      test(
+        'fields not in the new method are completely removed from form values and submitted payload',
+        () async {
+          Map<String, dynamic>? executedPayload;
+          String? executedSolverId;
+
+          mockExecuteSolverUseCase.onCall =
+              ({
+                required solverId,
+                required payload,
+                accessToken,
+              }) async {
+                executedSolverId = solverId;
+                executedPayload = payload;
+                return const Right(
+                  SolverResult(
+                    method: 'Secant Method',
+                    finalAnswer: {'root': 2.0},
+                  ),
+                );
+              };
+
+          // Start on Euler ODE
+          bloc.add(const SolverFormLoadStarted(solverId: 'euler'));
+          await bloc.stream.firstWhere(
+            (s) => s.isReady && s.config?.id == 'euler',
+          );
+
+          bloc.add(
+            const SolverFormFieldsBulkChanged({
+              'equation': 'x + y',
+              'x0': 0.0,
+              'y0': 1.0,
+              'h': 0.1,
+              'xn': 1.0,
+            }),
+          );
+          await bloc.stream.firstWhere((s) => s.values['h'] == 0.1);
+
+          expect(bloc.state.values.containsKey('x0'), isTrue);
+          expect(bloc.state.values.containsKey('y0'), isTrue);
+          expect(bloc.state.values.containsKey('h'), isTrue);
+
+          // Switch to Bisection root finding
+          bloc.add(const SolverFormMethodSwitched(solverId: 'bisection'));
+          await bloc.stream.firstWhere(
+            (s) => s.isReady && s.config?.id == 'bisection',
+          );
+
+          // Ensure ODE fields not in Bisection are removed from form state
+          expect(bloc.state.values.containsKey('x0'), isFalse);
+          expect(bloc.state.values.containsKey('y0'), isFalse);
+          expect(bloc.state.values.containsKey('h'), isFalse);
+          expect(bloc.state.values.containsKey('xn'), isFalse);
+          expect(bloc.state.values.containsKey('steps'), isFalse);
+          // Shared compatible field 'equation' is preserved
+          expect(bloc.state.values['equation'], equals('x + y'));
+
+          // Fill and submit Bisection form
+          bloc.add(
+            const SolverFormFieldsBulkChanged({
+              'equation': 'x^2 - 4',
+              'lowerBound': 1.0,
+              'upperBound': 3.0,
+            }),
+          );
+          await bloc.stream.firstWhere((s) => s.values['equation'] == 'x^2 - 4');
+
+          bloc.add(const SolverFormSubmitted());
+          await bloc.stream.firstWhere((s) => s.isSuccess);
+
+          expect(executedSolverId, equals('bisection'));
+          expect(executedPayload, isNotNull);
+          expect(executedPayload!.containsKey('y0'), isFalse);
+          expect(executedPayload!.containsKey('h'), isFalse);
+          expect(executedPayload!.containsKey('xn'), isFalse);
+          expect(executedPayload!.containsKey('steps'), isFalse);
+          expect(executedPayload!['equation'], equals('x^2 - 4'));
+          expect(executedPayload!['lowerBound'], equals(1.0));
+          expect(executedPayload!['upperBound'], equals(3.0));
+        },
+      );
+
+      test(
+        'stale validation errors for removed fields are cleared, and untouched fields show no errors after switch',
+        () async {
+          bloc.add(const SolverFormLoadStarted(solverId: 'bisection'));
+          await bloc.stream.firstWhere(
+            (s) => s.isReady && s.config?.id == 'bisection',
+          );
+
+          // Provoke cross-field validation error on bisection
+          bloc.add(
+            const SolverFormFieldsBulkChanged({
+              'lowerBound': 5.0,
+              'upperBound': 2.0,
+            }),
+          );
+          final errorState = await bloc.stream.firstWhere(
+            (s) => s.fieldErrors.isNotEmpty,
+          );
+          expect(errorState.fieldErrors.isNotEmpty, isTrue);
+
+          // Switch to Newton-Raphson (which has neither lowerBound nor upperBound)
+          bloc.add(
+            const SolverFormMethodSwitched(solverId: 'newton-raphson'),
+          );
+
+          final switchedState = await bloc.stream.firstWhere(
+            (s) => s.config?.id == 'newton-raphson',
+          );
+
+          // Stale errors for removed fields are cleared
+          expect(switchedState.fieldErrors, isEmpty);
+          expect(switchedState.touchedFields.contains('lowerBound'), isFalse);
+          expect(switchedState.touchedFields.contains('upperBound'), isFalse);
+        },
+      );
+
+      test(
+        'switching methods cancels/ignores in-flight solve and clears previous result',
+        () async {
+          final completer = Completer<Either<Failure, SolverResult>>();
+
+          mockExecuteSolverUseCase.onCall =
+              ({
+                required solverId,
+                required payload,
+                accessToken,
+              }) async {
+                return completer.future;
+              };
+
+          bloc.add(const SolverFormLoadStarted(solverId: 'bisection'));
+          await bloc.stream.firstWhere(
+            (s) => s.isReady && s.config?.id == 'bisection',
+          );
+
+          // Populate required fields so validation passes
+          bloc.add(
+            const SolverFormFieldsBulkChanged({
+              'equation': 'x^2 - 4',
+              'lowerBound': 0.0,
+              'upperBound': 3.0,
+            }),
+          );
+          await bloc.stream.firstWhere((s) => s.isReady);
+
+          // Set up stream expectation BEFORE dispatching events
+          // This ensures we capture all emissions including synchronous ones
+          final expectation = expectLater(
+            bloc.stream,
+            emitsInOrder([
+              // 1. submitting state from SolverFormSubmitted
+              predicate<SolverFormState>((s) => s.isSubmitting),
+              // 2. success state when completer resolves
+              predicate<SolverFormState>((s) => s.isSuccess && s.result != null),
+              // 3. ready state after method switch clears result
+              predicate<SolverFormState>(
+                (s) =>
+                    s.config?.id == 'regula-falsi' &&
+                    s.isReady &&
+                    s.result == null,
+              ),
+            ]),
+          );
+
+          // Submit bisection
+          bloc.add(const SolverFormSubmitted());
+          // Complete immediately so _onSubmitted proceeds
+          completer.complete(
+            const Right<Failure, SolverResult>(
+              SolverResult(
+                method: 'Bisection Method',
+                finalAnswer: {'root': 1.52},
+              ),
+            ),
+          );
+
+          // Switch to regula-falsi — will run after _onSubmitted returns
+          bloc.add(
+            const SolverFormMethodSwitched(solverId: 'regula-falsi'),
+          );
+
+          await expectation;
+
+          // Final state: method switched, stale result cleared
+          expect(bloc.state.config?.id, equals('regula-falsi'));
+          expect(bloc.state.isReady, isTrue);
+          expect(bloc.state.result, isNull);
         },
       );
     });

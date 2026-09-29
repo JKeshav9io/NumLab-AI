@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:numlab_frontend/features/auth/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/auth/presentation/screens/screens.dart';
 import 'package:numlab_frontend/features/profile/presentation/profile_screen.dart';
+import 'package:numlab_frontend/features/solvers/domain/models/models.dart';
 import 'package:numlab_frontend/features/solvers/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/solvers/presentation/screens/screens.dart';
 import 'package:numlab_frontend/injection_container.dart';
@@ -16,11 +17,21 @@ abstract final class AppRoutes {
   static const String login = '/login';
   static const String register = '/register';
   static const String solverPrefix = '/solver';
+  static const String workspacePrefix = '/workspace';
   static const String history = '/history';
   static const String profile = '/profile';
 
   /// Builds a solver path for the specified [id].
   static String solver(String id) => '$solverPrefix/$id';
+
+  /// Builds a category workspace path for the specified [categoryId],
+  /// optionally preselecting a [methodId].
+  static String workspace(String categoryId, [String? methodId]) {
+    if (methodId != null && methodId.isNotEmpty) {
+      return '$workspacePrefix/$categoryId?method=$methodId';
+    }
+    return '$workspacePrefix/$categoryId';
+  }
 
   /// Returns true if [location] requires an authenticated session.
   static bool isProtectedRoute(String location) {
@@ -77,16 +88,30 @@ class AppRouter {
           ),
         ),
         GoRoute(
+          path: '${AppRoutes.workspacePrefix}/:categoryId',
+          name: 'workspace',
+          builder: (context, state) {
+            final categoryId = state.pathParameters['categoryId'] ?? '';
+            final methodId = state.uri.queryParameters['method'];
+            return BlocProvider<SolverFormBloc>(
+              create: (_) => sl<SolverFormBloc>(),
+              child: SolverWorkspaceScreen(
+                categoryId: categoryId,
+                initialMethodId: methodId,
+              ),
+            );
+          },
+        ),
+        GoRoute(
           path: '${AppRoutes.solverPrefix}/:solverId',
           name: 'solver',
-          builder: (context, state) {
+          redirect: (context, state) {
             final solverId = state.pathParameters['solverId'] ?? '';
-            return BlocProvider<SolverFormBloc>(
-              create: (_) =>
-                  sl<SolverFormBloc>()
-                    ..add(SolverFormLoadStarted(solverId: solverId)),
-              child: SolverFormScreen(solverId: solverId),
-            );
+            final config = SolverMethodRegistry.getById(solverId);
+            if (config != null) {
+              return AppRoutes.workspace(config.category.id, config.id);
+            }
+            return AppRoutes.home;
           },
         ),
         GoRoute(

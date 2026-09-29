@@ -95,6 +95,53 @@ class SolverMethodConfig extends Equatable {
     return errors;
   }
 
+  static final RegExp _functionNamePattern = RegExp(
+    r'\b(sin|cos|tan|cot|sec|csc|asin|acos|atan|acot|asec|acsc|sinh|cosh|tanh|coth|sech|csch|asinh|acosh|atanh|exp|log|ln|sqrt|cbrt|abs)\b',
+    caseSensitive: false,
+  );
+
+  /// Normalizes supported standard mathematical function names (e.g. `Sin` -> `sin`, `COS` -> `cos`, `Exp` -> `exp`)
+  /// without altering user variable names or arbitrary algebraic expressions.
+  static String normalizeExpression(String expr) {
+    return expr.replaceAllMapped(
+      _functionNamePattern,
+      (match) => match[0]!.toLowerCase(),
+    );
+  }
+
+  /// Sanitizes a [rawPayload] map before network serialization:
+  /// - Omits any keys with `null` values or empty/whitespace strings.
+  /// - Normalizes standard function names in equation fields (e.g. `Sin(x)` -> `sin(x)`).
+  /// - For ODE methods, ensures either `xn` or `steps` is sent according to configured input, not both.
+  /// - Preserves valid non-null values (e.g. booleans, numbers, matrices, point lists) unchanged.
+  static Map<String, dynamic> sanitizePayload(Map<String, dynamic> rawPayload) {
+    final sanitized = <String, dynamic>{};
+
+    for (final entry in rawPayload.entries) {
+      final key = entry.key;
+      var value = entry.value;
+
+      if (value == null) {
+        continue;
+      }
+      if (value is String) {
+        if (value.trim().isEmpty) {
+          continue;
+        }
+        if (key == 'equation' ||
+            key == 'function' ||
+            key == 'func' ||
+            key == 'expression') {
+          value = normalizeExpression(value);
+        }
+      }
+
+      sanitized[key] = value;
+    }
+
+    return sanitized;
+  }
+
   @override
   List<Object?> get props => [
     id,

@@ -78,3 +78,16 @@ final class SolverFormSubmitted extends SolverFormEvent {
 final class SolverFormClearResultRequested extends SolverFormEvent {
   const SolverFormClearResultRequested();
 }
+
+/// Dispatched to switch the active solver method within a category workspace.
+final class SolverFormMethodSwitched extends SolverFormEvent {
+  const SolverFormMethodSwitched({
+    required this.solverId,
+  });
+
+  /// The unique solver identifier of the target method.
+  final String solverId;
+
+  @override
+  List<Object?> get props => [solverId];
+}

@@ -1,6 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:numlab_frontend/core/error/failures.dart';
-import 'package:numlab_frontend/features/solvers/domain/models/solver_method_registry.dart';
+import 'package:numlab_frontend/features/solvers/domain/models/models.dart';
 import 'package:numlab_frontend/features/solvers/domain/usecases/execute_solver_use_case.dart';
 import 'package:numlab_frontend/features/solvers/presentation/bloc/solver_form_event.dart';
 import 'package:numlab_frontend/features/solvers/presentation/bloc/solver_form_state.dart';
@@ -13,6 +13,7 @@ class SolverFormBloc extends Bloc<SolverFormEvent, SolverFormState> {
   }) : _executeSolverUseCase = executeSolverUseCase,
        super(const SolverFormState()) {
     on<SolverFormLoadStarted>(_onLoadStarted);
+    on<SolverFormMethodSwitched>(_onMethodSwitched);
     on<SolverFormFieldChanged>(_onFieldChanged);
     on<SolverFormFieldsBulkChanged>(_onFieldsBulkChanged);
     on<SolverFormValidateRequested>(_onValidateRequested);
@@ -22,11 +23,13 @@ class SolverFormBloc extends Bloc<SolverFormEvent, SolverFormState> {
   }
 
   final ExecuteSolverUseCase _executeSolverUseCase;
+  int _currentRequestId = 0;
 
   void _onLoadStarted(
     SolverFormLoadStarted event,
     Emitter<SolverFormState> emit,
   ) {
+    _currentRequestId++;
     emit(
       state.copyWith(
         status: SolverFormStatus.loadingConfig,
@@ -44,6 +47,7 @@ class SolverFormBloc extends Bloc<SolverFormEvent, SolverFormState> {
           clearConfig: true,
           values: const {},
           fieldErrors: const {},
+          touchedFields: const {},
           clearResult: true,
           failure: ValidationFailure(
             message: 'Unknown solver method: "${event.solverId}"',
@@ -58,6 +62,9 @@ class SolverFormBloc extends Bloc<SolverFormEvent, SolverFormState> {
     final initialValues = event.initialValues != null
         ? {...defaultValues, ...event.initialValues!}
         : defaultValues;
+    final initialTouched = event.initialValues != null
+        ? event.initialValues!.keys.toSet()
+        : <String>{};
 
     emit(
       state.copyWith(
@@ -65,6 +72,74 @@ class SolverFormBloc extends Bloc<SolverFormEvent, SolverFormState> {
         config: config,
         values: initialValues,
         fieldErrors: const {},
+        touchedFields: initialTouched,
+        clearResult: true,
+        clearFailure: true,
+      ),
+    );
+  }
+
+  void _onMethodSwitched(
+    SolverFormMethodSwitched event,
+    Emitter<SolverFormState> emit,
+  ) {
+    final newConfig = SolverMethodRegistry.getById(event.solverId);
+    if (newConfig == null) {
+      emit(
+        state.copyWith(
+          status: SolverFormStatus.failure,
+          failure: ValidationFailure(
+            message: 'Unknown solver method: "${event.solverId}"',
+            code: 'UNKNOWN_SOLVER_METHOD',
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Invalidate in-flight solve and clear previous result and submission state
+    _currentRequestId++;
+
+    final oldConfig = state.config;
+    final newValues = <String, dynamic>{};
+    final newTouchedFields = <String>{};
+
+    // Compatible values: carry over when field key AND input type match.
+    // Fields not present in the new method are dropped.
+    // New fields get their configured defaults.
+    for (final field in newConfig.fields) {
+      final oldField = oldConfig?.getField(field.name);
+      if (oldField != null &&
+          oldField.type == field.type &&
+          state.values.containsKey(field.name)) {
+        newValues[field.name] = state.values[field.name];
+        if (state.touchedFields.contains(field.name)) {
+          newTouchedFields.add(field.name);
+        }
+      } else {
+        if (field.defaultValue != null) {
+          newValues[field.name] = field.defaultValue;
+        }
+      }
+    }
+
+    // Clear all errors for removed fields, revalidate the resulting form,
+    // but do NOT show errors on untouched fields.
+    final allValidationErrors = newConfig.validate(newValues);
+    final visibleErrors = <String, String>{};
+    for (final entry in allValidationErrors.entries) {
+      if (newTouchedFields.contains(entry.key)) {
+        visibleErrors[entry.key] = entry.value;
+      }
+    }
+
+    emit(
+      state.copyWith(
+        status: SolverFormStatus.ready,
+        config: newConfig,
+        values: newValues,
+        fieldErrors: visibleErrors,
+        touchedFields: newTouchedFields,
         clearResult: true,
         clearFailure: true,
       ),
@@ -77,6 +152,8 @@ class SolverFormBloc extends Bloc<SolverFormEvent, SolverFormState> {
   ) {
     final updatedValues = Map<String, dynamic>.from(state.values)
       ..[event.fieldName] = event.value;
+    final updatedTouched = Set<String>.from(state.touchedFields)
+      ..add(event.fieldName);
 
     final errors = state.config?.validate(updatedValues) ?? const {};
 
@@ -85,6 +162,7 @@ class SolverFormBloc extends Bloc<SolverFormEvent, SolverFormState> {
         status: SolverFormStatus.ready,
         values: updatedValues,
         fieldErrors: errors,
+        touchedFields: updatedTouched,
         clearResult: true,
         clearFailure: true,
       ),
@@ -97,6 +175,8 @@ class SolverFormBloc extends Bloc<SolverFormEvent, SolverFormState> {
   ) {
     final updatedValues = Map<String, dynamic>.from(state.values)
       ..addAll(event.values);
+    final updatedTouched = Set<String>.from(state.touchedFields)
+      ..addAll(event.values.keys);
 
     final errors = state.config?.validate(updatedValues) ?? const {};
 
@@ -105,6 +185,7 @@ class SolverFormBloc extends Bloc<SolverFormEvent, SolverFormState> {
         status: SolverFormStatus.ready,
         values: updatedValues,
         fieldErrors: errors,
+        touchedFields: updatedTouched,
         clearResult: true,
         clearFailure: true,
       ),
@@ -131,12 +212,14 @@ class SolverFormBloc extends Bloc<SolverFormEvent, SolverFormState> {
   ) {
     if (state.config == null) return;
 
+    _currentRequestId++;
     final defaultValues = state.config!.defaultPayload();
     emit(
       state.copyWith(
         status: SolverFormStatus.ready,
         values: defaultValues,
         fieldErrors: const {},
+        touchedFields: const {},
         clearResult: true,
         clearFailure: true,
       ),
@@ -176,6 +259,10 @@ class SolverFormBloc extends Bloc<SolverFormEvent, SolverFormState> {
         state.copyWith(
           status: SolverFormStatus.failure,
           fieldErrors: validationErrors,
+          touchedFields: {
+            ...state.touchedFields,
+            ...config.fields.map((f) => f.name),
+          },
           failure: ValidationFailure(
             message: 'Validation failed for ${config.name}',
             fieldErrors: fieldErrorsList,
@@ -184,6 +271,8 @@ class SolverFormBloc extends Bloc<SolverFormEvent, SolverFormState> {
       );
       return;
     }
+
+    final requestId = ++_currentRequestId;
 
     emit(
       state.copyWith(
@@ -194,11 +283,26 @@ class SolverFormBloc extends Bloc<SolverFormEvent, SolverFormState> {
       ),
     );
 
+    // Build payload strictly from the currently selected method's fields
+    final allowedFieldNames = config.fields.map((f) => f.name).toSet();
+    final filteredValues = <String, dynamic>{};
+    for (final entry in state.values.entries) {
+      if (allowedFieldNames.contains(entry.key)) {
+        filteredValues[entry.key] = entry.value;
+      }
+    }
+    final sanitizedPayload = SolverMethodConfig.sanitizePayload(filteredValues);
+
     final result = await _executeSolverUseCase(
       solverId: config.id,
-      payload: state.values,
+      payload: sanitizedPayload,
       accessToken: event.accessToken,
     );
+
+    // Stale results: ignore late response if method was switched or reset
+    if (requestId != _currentRequestId) {
+      return;
+    }
 
     result.fold(
       (failure) {
@@ -235,6 +339,7 @@ class SolverFormBloc extends Bloc<SolverFormEvent, SolverFormState> {
     SolverFormClearResultRequested event,
     Emitter<SolverFormState> emit,
   ) {
+    _currentRequestId++;
     emit(
       state.copyWith(
         status: SolverFormStatus.ready,

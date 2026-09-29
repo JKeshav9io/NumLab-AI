@@ -841,8 +841,8 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        // 1. Verify user is on solver form screen and NOT redirected to login
-        expect(find.byType(SolverFormScreen), findsOneWidget);
+        // 1. Verify user is on solver workspace screen and NOT redirected to login
+        expect(find.byType(SolverWorkspaceScreen), findsOneWidget);
         expect(find.byKey(const Key('login_screen')), findsNothing);
         expect(find.text('Bisection Method'), findsWidgets);
 
