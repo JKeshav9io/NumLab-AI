@@ -50,6 +50,69 @@ class FakeFlutterSecureStorage extends Fake implements FlutterSecureStorage {
   }
 }
 
+/// Models the web plugin's asynchronous first-use AES key initialization.
+/// Parallel writes can each create a key before either stores it; only the
+/// ciphertext encrypted with the last stored key remains readable.
+class ColdKeyFlutterSecureStorage extends FakeFlutterSecureStorage {
+  ColdKeyFlutterSecureStorage({this.failFirstWrite = false});
+
+  bool failFirstWrite;
+  int? _key;
+  int _nextKey = 0;
+  final _ciphertext = <String, (int, String)>{};
+
+  @override
+  Future<void> write({
+    required String key,
+    required String? value,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    if (failFirstWrite) {
+      failFirstWrite = false;
+      throw StateError('Storage needs recovery');
+    }
+    var encryptionKey = _key;
+    if (encryptionKey == null) {
+      encryptionKey = ++_nextKey;
+      await Future<void>.delayed(Duration.zero);
+      _key = encryptionKey;
+    }
+    if (value != null) _ciphertext[key] = (encryptionKey, value);
+  }
+
+  @override
+  Future<String?> read({
+    required String key,
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    final entry = _ciphertext[key];
+    return entry?.$1 == _key ? entry?.$2 : null;
+  }
+
+  @override
+  Future<void> deleteAll({
+    AppleOptions? iOptions,
+    AndroidOptions? aOptions,
+    LinuxOptions? lOptions,
+    WebOptions? webOptions,
+    AppleOptions? mOptions,
+    WindowsOptions? wOptions,
+  }) async {
+    _ciphertext.clear();
+    _key = null;
+  }
+}
+
 void main() {
   group('SecureStorageServiceImpl', () {
     late FakeFlutterSecureStorage fakeStorage;
@@ -69,6 +132,23 @@ void main() {
       expect(fakeStorage.store['numlab_access_token'], 'access_123');
       expect(fakeStorage.store['numlab_refresh_token'], 'refresh_456');
     });
+
+    for (final recovering in [false, true]) {
+      test(
+        'both tokens remain readable after cold key initialization: recovery=$recovering',
+        () async {
+          final storage = SecureStorageServiceImpl(
+            storage: ColdKeyFlutterSecureStorage(failFirstWrite: recovering),
+          );
+          await storage.saveTokens(
+            accessToken: 'fresh-access',
+            refreshToken: 'fresh-refresh',
+          );
+          expect(await storage.getAccessToken(), 'fresh-access');
+          expect(await storage.getRefreshToken(), 'fresh-refresh');
+        },
+      );
+    }
 
     test('getAccessToken retrieves stored access token or null', () async {
       expect(await storageService.getAccessToken(), isNull);
@@ -122,20 +202,26 @@ void main() {
       },
     );
 
-    test('recovers gracefully and clears tokens if read throws decryption exception', () async {
-      final failingStorage = _FailingFlutterSecureStorage();
-      final failingService = SecureStorageServiceImpl(storage: failingStorage);
+    test(
+      'recovers gracefully and clears tokens if read throws decryption exception',
+      () async {
+        final failingStorage = _FailingFlutterSecureStorage();
+        final failingService = SecureStorageServiceImpl(
+          storage: failingStorage,
+        );
 
-      final token = await failingService.getAccessToken();
-      expect(token, isNull);
+        final token = await failingService.getAccessToken();
+        expect(token, isNull);
 
-      final refresh = await failingService.getRefreshToken();
-      expect(refresh, isNull);
-    });
+        final refresh = await failingService.getRefreshToken();
+        expect(refresh, isNull);
+      },
+    );
   });
 }
 
-class _FailingFlutterSecureStorage extends Fake implements FlutterSecureStorage {
+class _FailingFlutterSecureStorage extends Fake
+    implements FlutterSecureStorage {
   @override
   Future<String?> read({
     required String key,
