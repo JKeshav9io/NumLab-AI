@@ -11,6 +11,7 @@ void main() {
       '/api/v1/auth/login',
       '/api/v1/users/me',
       '/api/v1/users/me/history/private-marker',
+      '/api/v1/reports/private-marker',
     ]) {
       test('omits private request, response, and error content for $path', () {
         final output = _TestLogOutput();

@@ -68,19 +68,20 @@ Failure mapExceptionToFailure(Object exception, [StackTrace? stackTrace]) {
             // 2. Validation Errors (400)
             if (code == 'VALIDATION_ERROR') {
               final fieldErrors = <FieldError>[];
-              if (details is Map<String, dynamic>) {
-                final fieldsList = details['fields'] ?? details['errors'];
-                if (fieldsList is List) {
-                  for (final item in fieldsList) {
-                    if (item is Map<String, dynamic>) {
-                      fieldErrors.add(FieldError.fromJson(item));
-                    }
-                  }
-                }
-              } else if (details is List) {
-                for (final item in details) {
-                  if (item is Map<String, dynamic>) {
+              // The report UUID validator uses details.details: [string],
+              // unlike solver field maps. Retain messages without inventing
+              // field names, and ignore malformed fields rather than casting.
+              final fieldsList = details is Map<String, dynamic>
+                  ? details['fields'] ?? details['errors'] ?? details['details']
+                  : details;
+              if (fieldsList is List) {
+                for (final item in fieldsList) {
+                  if (item is Map<String, dynamic> &&
+                      (item['field'] == null || item['field'] is String) &&
+                      (item['message'] == null || item['message'] is String)) {
                     fieldErrors.add(FieldError.fromJson(item));
+                  } else if (item is String) {
+                    fieldErrors.add(FieldError(field: '', message: item));
                   }
                 }
               }

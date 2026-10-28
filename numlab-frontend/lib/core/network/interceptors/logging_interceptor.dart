@@ -24,6 +24,7 @@ class DebugLoggingInterceptor extends Interceptor {
     final path = options.uri.path.replaceFirst(RegExp(r'/$'), '');
     if (path == '/explain' || path.endsWith('/explain')) return '/explain';
     if (path.contains('/auth/')) return '/auth';
+    if (path.contains('/reports/')) return '/reports';
     if (path.endsWith('/users/me') || path.contains('/users/me/')) {
       return '/users/me';
     }

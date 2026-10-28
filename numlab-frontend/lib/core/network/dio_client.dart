@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:numlab_frontend/core/constants/api_constants.dart';
 import 'package:numlab_frontend/core/network/interceptors/auth_interceptor.dart';
+import 'package:numlab_frontend/core/network/interceptors/binary_error_interceptor.dart';
 import 'package:numlab_frontend/core/network/interceptors/logging_interceptor.dart';
 import 'package:numlab_frontend/core/storage/secure_storage_service.dart';
 
@@ -43,6 +44,11 @@ abstract final class DioClient {
         },
       ),
     );
+
+    // Decode binary request errors before auth inspects TOKEN_EXPIRED.
+    dio.interceptors.add(BinaryErrorInterceptor());
+    // Replays must not re-enter the error queue whose original call awaits them.
+    dio.interceptors.add(AuthRetryErrorInterceptor());
 
     // 1. Auth Interceptor (Queued for token refresh in Phase 1)
     dio.interceptors.add(
