@@ -38,11 +38,13 @@ class SolverWarningsView extends StatelessWidget {
                 size: 20,
               ),
               const SizedBox(width: AppSpacing.xs),
-              Text(
-                'Solver Warnings',
-                style: AppTypography.titleMedium.copyWith(
-                  color: AppColors.warning,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  'Solver Warnings',
+                  style: AppTypography.titleMedium.copyWith(
+                    color: AppColors.warning,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],

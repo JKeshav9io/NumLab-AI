@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:numlab_frontend/core/theme/app_colors.dart';
 import 'package:numlab_frontend/core/theme/app_spacing.dart';
 import 'package:numlab_frontend/core/theme/app_typography.dart';
+import 'package:numlab_frontend/features/explanations/presentation/bloc/bloc.dart';
+import 'package:numlab_frontend/features/explanations/presentation/widgets/widgets.dart';
 import 'package:numlab_frontend/features/solvers/domain/entities/solver_result.dart';
 import 'package:numlab_frontend/features/solvers/presentation/widgets/charts/charts.dart';
 import 'package:numlab_frontend/features/solvers/presentation/widgets/result/solver_explanation_view.dart';
@@ -25,10 +27,12 @@ import 'package:numlab_frontend/features/solvers/presentation/widgets/result/sol
 class SolverResultView extends StatelessWidget {
   const SolverResultView({
     required this.result,
+    this.explanationBloc,
     super.key,
   });
 
   final SolverResult result;
+  final ExplanationBloc? explanationBloc;
 
   @override
   Widget build(BuildContext context) {
@@ -207,11 +211,17 @@ class SolverResultView extends StatelessWidget {
             if (result.hasIterations)
               SolverIterationsView(iterations: result.iterations),
 
-            // 8. Step-by-Step Explanation
+            // 8. Step-by-Step Explanation (Algorithmic)
             if (result.hasExplanation)
               SolverExplanationView(explanation: result.explanation!),
 
-            // 8. Metadata Footer (Request ID & Timestamp)
+            // 9. AI Pedagogical Explanation
+            AiExplanationView(
+              result: result,
+              explanationBloc: explanationBloc,
+            ),
+
+            // 10. Metadata Footer (Request ID & Timestamp)
             if (result.requestId != null || result.timestamp != null)
               Padding(
                 key: const Key('solver_result_meta'),
