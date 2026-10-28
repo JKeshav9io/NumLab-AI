@@ -14,6 +14,7 @@ import 'package:numlab_frontend/features/explanations/data/datasources/datasourc
 import 'package:numlab_frontend/features/explanations/data/repositories/repositories.dart';
 import 'package:numlab_frontend/features/explanations/domain/repositories/repositories.dart';
 import 'package:numlab_frontend/features/explanations/domain/usecases/usecases.dart';
+import 'package:numlab_frontend/features/explanations/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/history/data/datasources/datasources.dart';
 import 'package:numlab_frontend/features/history/data/repositories/repositories.dart';
 import 'package:numlab_frontend/features/history/domain/repositories/repositories.dart';
@@ -155,7 +156,11 @@ Future<void> initDependencies() async {
     ..registerLazySingleton<ExplainUseCase>(
       () => ExplainUseCase(sl<ExplanationRepository>()),
     )
-
+    ..registerFactory<ExplanationBloc>(
+      () => ExplanationBloc(
+        explainUseCase: sl<ExplainUseCase>(),
+      ),
+    )
 
 
 
