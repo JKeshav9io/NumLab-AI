@@ -73,7 +73,48 @@ class MockAuthBloc extends Fake implements AuthBloc {
 
 void main() {
   group('HistoryDetailPage presentation tests', () {
-
+    testWidgets(
+      'history shows deterministic and saved AI explanations together',
+      (tester) async {
+        final run = HistoryRun(
+          id: 'both-explanations',
+          method: 'root/bisection',
+          createdAt: DateTime(2026, 10, 27),
+          outputPayload: const {
+            'method': 'Bisection Method',
+            'status': 'converged',
+            'finalAnswer': {'root': 2},
+            'explanation': {
+              'summary': 'Deterministic steps',
+              'steps': <String>[],
+            },
+          },
+          aiExplanations: [
+            HistoryExplanation(
+              id: 'saved-ai',
+              responseText: '**Saved tutor** explanation.',
+              createdAt: DateTime(2026, 10, 27),
+            ),
+          ],
+        );
+        final bloc = MockHistoryBloc(HistoryDetailLoaded(run: run));
+        addTearDown(bloc.close);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: HistoryDetailPage(runId: run.id, bloc: bloc),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Deterministic steps'), findsOneWidget);
+        expect(find.text('Saved tutor explanation.'), findsOneWidget);
+        expect(find.text('Saved AI Explanation'), findsOneWidget);
+        expect(find.byType(SolverExplanationView), findsNWidgets(2));
+        expect(find.byKey(const Key('explanation_cached_chip')), findsNothing);
+        expect(find.byKey(const Key('explanation_fresh_chip')), findsNothing);
+        expect(bloc.recordedEvents, isEmpty);
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     late MockHistoryBloc mockHistoryBloc;
 

@@ -7,7 +7,9 @@ import 'package:numlab_frontend/core/theme/app_spacing.dart';
 import 'package:numlab_frontend/core/theme/app_typography.dart';
 import 'package:numlab_frontend/features/history/domain/entities/history_run.dart';
 import 'package:numlab_frontend/features/history/presentation/bloc/bloc.dart';
+import 'package:numlab_frontend/features/solvers/domain/entities/solver_explanation.dart';
 import 'package:numlab_frontend/features/solvers/domain/entities/solver_result.dart';
+import 'package:numlab_frontend/features/solvers/presentation/widgets/result/solver_explanation_view.dart';
 import 'package:numlab_frontend/features/solvers/presentation/widgets/result/solver_result_view.dart';
 import 'package:numlab_frontend/injection_container.dart';
 
@@ -135,6 +137,11 @@ class _HistoryDetailPageViewState extends State<_HistoryDetailPageView> {
 
   Widget _buildRunResult(HistoryRun run) {
     final result = run.toSolverResult();
+    final original = run.outputPayload['explanation'];
+    // The legacy conversion uses attached AI text only when deterministic
+    // explanation text is absent. Preserve both when the API supplies both.
+    final hasOriginal =
+        original is Map || (original is String && original.isNotEmpty);
     return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(
@@ -144,6 +151,15 @@ class _HistoryDetailPageViewState extends State<_HistoryDetailPageView> {
             key: const Key('history_detail_solver_result_view'),
             result: result,
           ),
+          if (hasOriginal && run.aiExplanations.isNotEmpty)
+            SolverExplanationView(
+              key: const Key('history_saved_ai_explanation'),
+              title: 'Saved AI Explanation',
+              explanation: SolverExplanation(
+                summary: run.aiExplanations.first.responseText,
+                steps: const [],
+              ),
+            ),
         ],
       ),
     );

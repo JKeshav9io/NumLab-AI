@@ -18,6 +18,18 @@ class DebugLoggingInterceptor extends Interceptor {
 
   final Logger _logger;
 
+  // These responses and errors can contain free text, PII, or credentials.
+  // Log only a route category and status, including for non-JSON failures.
+  static String? _privateRoute(RequestOptions options) {
+    final path = options.uri.path.replaceFirst(RegExp(r'/$'), '');
+    if (path == '/explain' || path.endsWith('/explain')) return '/explain';
+    if (path.contains('/auth/')) return '/auth';
+    if (path.endsWith('/users/me') || path.contains('/users/me/')) {
+      return '/users/me';
+    }
+    return null;
+  }
+
   static const Set<String> _sensitiveKeys = {
     'password',
     'password_confirmation',
@@ -89,6 +101,11 @@ class DebugLoggingInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     if (kDebugMode) {
+      final privateRoute = _privateRoute(options);
+      if (privateRoute != null) {
+        _logger.d('--> ${options.method} $privateRoute (content omitted)');
+        return super.onRequest(options, handler);
+      }
       final safeHeaders = redactHeaders(options.headers);
       final safeData = redactData(options.data);
       _logger.d(
@@ -104,6 +121,11 @@ class DebugLoggingInterceptor extends Interceptor {
     ResponseInterceptorHandler handler,
   ) {
     if (kDebugMode) {
+      final privateRoute = _privateRoute(response.requestOptions);
+      if (privateRoute != null) {
+        _logger.i('<-- ${response.statusCode} $privateRoute (content omitted)');
+        return super.onResponse(response, handler);
+      }
       final safeData = redactData(response.data);
       _logger.i(
         '<-- ${response.statusCode} ${response.requestOptions.uri}\nData: $safeData',
@@ -128,7 +150,8 @@ class DebugLoggingInterceptor extends Interceptor {
           !error.startsWith('<')) {
         return error.trim();
       }
-      if (data['code'] is String && (data['code'] as String).trim().isNotEmpty) {
+      if (data['code'] is String &&
+          (data['code'] as String).trim().isNotEmpty) {
         return (data['code'] as String).trim();
       }
     }
@@ -158,9 +181,7 @@ class DebugLoggingInterceptor extends Interceptor {
         data.trim().isNotEmpty &&
         !data.trimLeft().startsWith('<')) {
       final trimmed = data.trim();
-      return trimmed.length > 300
-          ? '${trimmed.substring(0, 300)}...'
-          : trimmed;
+      return trimmed.length > 300 ? '${trimmed.substring(0, 300)}...' : trimmed;
     }
     return null;
   }
@@ -206,14 +227,13 @@ class DebugLoggingInterceptor extends Interceptor {
     final fallbackMessage =
         (err.response?.statusMessage != null &&
             err.response!.statusMessage!.trim().isNotEmpty)
-            ? err.response!.statusMessage!.trim()
-            : 'Bad Request';
+        ? err.response!.statusMessage!.trim()
+        : 'Bad Request';
     final message = rawMessage ?? fallbackMessage;
 
-    final method =
-        err.requestOptions.method.isNotEmpty
-            ? err.requestOptions.method
-            : 'POST';
+    final method = err.requestOptions.method.isNotEmpty
+        ? err.requestOptions.method
+        : 'POST';
     final endpoint = _formatEndpoint(err.requestOptions);
 
     final buffer = StringBuffer('⚠️ [400 $code] $method $endpoint');
@@ -252,13 +272,22 @@ class DebugLoggingInterceptor extends Interceptor {
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
     if (kDebugMode) {
+      final privateRoute = _privateRoute(err.requestOptions);
+      if (privateRoute != null) {
+        _logger.w(
+          '<-- ERROR [${err.response?.statusCode}] $privateRoute '
+          '(${err.type.name}; content omitted)',
+        );
+        return super.onError(err, handler);
+      }
       final statusCode = err.response?.statusCode;
       if (statusCode == 400) {
         _logger.w(formatBadRequestLog(err));
       } else if (isExpectedDomainError(err)) {
         final code = extractErrorCode(err.response?.data) ?? 'VALIDATION_ERROR';
         final status = err.response?.statusCode;
-        final msg = extractErrorMessage(err.response?.data) ??
+        final msg =
+            extractErrorMessage(err.response?.data) ??
             err.response?.statusMessage ??
             'Validation Error';
         _logger.w(
