@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:numlab_frontend/core/router/app_router.dart';
 import 'package:numlab_frontend/features/auth/domain/entities/user.dart';
 import 'package:numlab_frontend/features/auth/presentation/bloc/bloc.dart';
+import 'package:numlab_frontend/features/history/presentation/pages/pages.dart';
 import 'package:numlab_frontend/features/solvers/presentation/screens/screens.dart';
 
 class MockAuthBloc extends Fake implements AuthBloc {
@@ -38,24 +39,38 @@ void main() {
   group('AppRoutes Helper Methods', () {
     test('isProtectedRoute correctly identifies protected endpoints', () {
       expect(AppRoutes.isProtectedRoute('/profile'), isTrue);
+      expect(AppRoutes.isProtectedRoute('/profile/'), isTrue);
       expect(AppRoutes.isProtectedRoute('/profile/edit'), isTrue);
       expect(AppRoutes.isProtectedRoute('/history'), isTrue);
+      expect(AppRoutes.isProtectedRoute('/history/'), isTrue);
       expect(AppRoutes.isProtectedRoute('/history/123'), isTrue);
+      expect(AppRoutes.isProtectedRoute('/history/123/'), isTrue);
+      expect(AppRoutes.isProtectedRoute('/history/123/subroute'), isTrue);
+      expect(AppRoutes.isProtectedRoute('/history/123/nested/deep'), isTrue);
+      expect(AppRoutes.isProtectedRoute('/history?limit=10'), isTrue);
+      expect(AppRoutes.isProtectedRoute('/history/123?foo=bar'), isTrue);
 
       expect(AppRoutes.isProtectedRoute('/'), isFalse);
       expect(AppRoutes.isProtectedRoute('/login'), isFalse);
       expect(AppRoutes.isProtectedRoute('/register'), isFalse);
+      expect(AppRoutes.isProtectedRoute('/history-other'), isFalse);
       expect(AppRoutes.isProtectedRoute('/solver/root/bisection'), isFalse);
+      expect(AppRoutes.isProtectedRoute('/workspace/root'), isFalse);
     });
 
     test('isAuthRoute correctly identifies authentication entry points', () {
       expect(AppRoutes.isAuthRoute('/login'), isTrue);
+      expect(AppRoutes.isAuthRoute('/login/'), isTrue);
       expect(AppRoutes.isAuthRoute('/login/reset'), isTrue);
+      expect(AppRoutes.isAuthRoute('/login?from=/history'), isTrue);
       expect(AppRoutes.isAuthRoute('/register'), isTrue);
+      expect(AppRoutes.isAuthRoute('/register/'), isTrue);
+      expect(AppRoutes.isAuthRoute('/register?from=/history'), isTrue);
 
       expect(AppRoutes.isAuthRoute('/'), isFalse);
       expect(AppRoutes.isAuthRoute('/profile'), isFalse);
       expect(AppRoutes.isAuthRoute('/history'), isFalse);
+      expect(AppRoutes.isAuthRoute('/history/123'), isFalse);
     });
   });
 
@@ -325,6 +340,219 @@ void main() {
 
         // Arrives at preserved intended destination
         expect(find.byKey(const Key('history_screen')), findsOneWidget);
+        expect(find.byKey(const Key('login_screen')), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Unauthenticated → /history redirects to /login with encoded ?from=/history',
+      (tester) async {
+        mockAuthBloc = MockAuthBloc(const AuthUnauthenticated());
+        appRouter = AppRouter(
+          authBloc: mockAuthBloc,
+          initialLocation: AppRoutes.history,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: appRouter.router,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('login_screen')), findsOneWidget);
+        expect(find.byKey(const Key('history_screen')), findsNothing);
+
+        final currentUri = appRouter.router.routeInformationProvider.value.uri;
+        expect(currentUri.path, AppRoutes.login);
+        expect(currentUri.queryParameters['from'], AppRoutes.history);
+      },
+    );
+
+    testWidgets(
+      'Unauthenticated → /history/:runId redirects to /login with encoded destination',
+      (tester) async {
+        mockAuthBloc = MockAuthBloc(const AuthUnauthenticated());
+        appRouter = AppRouter(
+          authBloc: mockAuthBloc,
+          initialLocation: '/history/calc-run-123',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: appRouter.router,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('login_screen')), findsOneWidget);
+        expect(find.byKey(const Key('history_detail_screen')), findsNothing);
+
+        final currentUri = appRouter.router.routeInformationProvider.value.uri;
+        expect(currentUri.path, AppRoutes.login);
+        expect(currentUri.queryParameters['from'], '/history/calc-run-123');
+      },
+    );
+
+    testWidgets(
+      'Unauthenticated → nested /history/... paths cannot bypass protection',
+      (tester) async {
+        mockAuthBloc = MockAuthBloc(const AuthUnauthenticated());
+        appRouter = AppRouter(
+          authBloc: mockAuthBloc,
+          initialLocation: '/history/calc-run-123/nested/deep',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: appRouter.router,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('login_screen')), findsOneWidget);
+        expect(find.byKey(const Key('history_detail_screen')), findsNothing);
+
+        final currentUri = appRouter.router.routeInformationProvider.value.uri;
+        expect(currentUri.path, AppRoutes.login);
+        expect(
+          currentUri.queryParameters['from'],
+          '/history/calc-run-123/nested/deep',
+        );
+      },
+    );
+
+    testWidgets(
+      'Authenticated → /history allows direct access and resolves HistoryPage',
+      (tester) async {
+        mockAuthBloc = MockAuthBloc(AuthAuthenticated(user: tUser));
+        appRouter = AppRouter(
+          authBloc: mockAuthBloc,
+          initialLocation: AppRoutes.history,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: appRouter.router,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('history_screen')), findsOneWidget);
+        expect(find.byKey(const Key('login_screen')), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Authenticated → /history/:runId allows access and passes exact runId',
+      (tester) async {
+        mockAuthBloc = MockAuthBloc(AuthAuthenticated(user: tUser));
+        appRouter = AppRouter(
+          authBloc: mockAuthBloc,
+          initialLocation: '/history/calc-run-456',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: appRouter.router,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('history_detail_screen')), findsOneWidget);
+        expect(find.byKey(const Key('history_screen')), findsNothing);
+        expect(find.byKey(const Key('login_screen')), findsNothing);
+
+        // Verify exact runId was passed to HistoryDetailPage
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is HistoryDetailPage && w.runId == 'calc-run-456',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'Login return flow: unauthenticated on /history/:runId → login → preserves destination',
+      (tester) async {
+        mockAuthBloc = MockAuthBloc(const AuthUnauthenticated());
+        appRouter = AppRouter(
+          authBloc: mockAuthBloc,
+          initialLocation: '/history/calc-run-789',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: appRouter.router,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Redirected to login with ?from=/history/calc-run-789
+        expect(find.byKey(const Key('login_screen')), findsOneWidget);
+        expect(find.byKey(const Key('history_detail_screen')), findsNothing);
+
+        // User logs in
+        mockAuthBloc.emitState(AuthAuthenticated(user: tUser));
+        await tester.pumpAndSettle();
+
+        // Arrives at preserved intended history detail destination
+        expect(find.byKey(const Key('history_detail_screen')), findsOneWidget);
+        expect(find.byKey(const Key('login_screen')), findsNothing);
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is HistoryDetailPage && w.runId == 'calc-run-789',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'Session revocation on /history/:runId immediately redirects to /login',
+      (tester) async {
+        mockAuthBloc = MockAuthBloc(AuthAuthenticated(user: tUser));
+        appRouter = AppRouter(
+          authBloc: mockAuthBloc,
+          initialLocation: '/history/calc-run-789',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: appRouter.router,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('history_detail_screen')), findsOneWidget);
+
+        // Revoke session
+        mockAuthBloc.emitState(const AuthUnauthenticated());
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('login_screen')), findsOneWidget);
+        expect(find.byKey(const Key('history_detail_screen')), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Open redirect protection: protocol-relative and external from params fallback to home',
+      (tester) async {
+        mockAuthBloc = MockAuthBloc(AuthAuthenticated(user: tUser));
+        appRouter = AppRouter(
+          authBloc: mockAuthBloc,
+          initialLocation: '${AppRoutes.login}?from=%2F%2Fevil.com',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: appRouter.router,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(HomeScreen), findsOneWidget);
         expect(find.byKey(const Key('login_screen')), findsNothing);
       },
     );

@@ -855,7 +855,9 @@ void main() {
               value: 'x^3 - 8',
             ),
           );
-          await bloc.stream.firstWhere((s) => s.values['equation'] == 'x^3 - 8');
+          await bloc.stream.firstWhere(
+            (s) => s.values['equation'] == 'x^3 - 8',
+          );
 
           bloc.add(
             const SolverFormFieldChanged(
@@ -884,8 +886,9 @@ void main() {
 
           // 3. New fields receive schema defaults: initialGuess
           final nrConfig = SolverMethodRegistry.getById('newton-raphson')!;
-          final expectedInitialGuessDefault =
-              nrConfig.getField('initialGuess')?.defaultValue;
+          final expectedInitialGuessDefault = nrConfig
+              .getField('initialGuess')
+              ?.defaultValue;
           expect(
             switchedState.values['initialGuess'],
             equals(expectedInitialGuessDefault),
@@ -962,7 +965,9 @@ void main() {
               'upperBound': 3.0,
             }),
           );
-          await bloc.stream.firstWhere((s) => s.values['equation'] == 'x^2 - 4');
+          await bloc.stream.firstWhere(
+            (s) => s.values['equation'] == 'x^2 - 4',
+          );
 
           bloc.add(const SolverFormSubmitted());
           await bloc.stream.firstWhere((s) => s.isSuccess);
@@ -1052,7 +1057,9 @@ void main() {
               // 1. submitting state from SolverFormSubmitted
               predicate<SolverFormState>((s) => s.isSubmitting),
               // 2. success state when completer resolves
-              predicate<SolverFormState>((s) => s.isSuccess && s.result != null),
+              predicate<SolverFormState>(
+                (s) => s.isSuccess && s.result != null,
+              ),
               // 3. ready state after method switch clears result
               predicate<SolverFormState>(
                 (s) =>

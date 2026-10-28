@@ -109,28 +109,31 @@ void main() {
       expect(dio.options.baseUrl, equals('http://10.0.2.2:3000/api/v1'));
     });
 
-    test('defaultBaseUrl resolves according to current platform in test environment', () {
-      final resolved = ApiConstants.defaultBaseUrl;
-      if (kIsWeb) {
-        expect(resolved, equals('http://localhost:3000/api/v1'));
-      } else {
-        switch (defaultTargetPlatform) {
-          case TargetPlatform.android:
-            expect(
-              resolved,
-              anyOf(
-                equals('http://10.0.2.2:3000/api/v1'),
-                equals('http://192.168.1.36:3000/api/v1'),
-              ),
-            );
-          case TargetPlatform.iOS:
-          case TargetPlatform.windows:
-          case TargetPlatform.macOS:
-          case TargetPlatform.linux:
-          case TargetPlatform.fuchsia:
-            expect(resolved, equals('http://localhost:3000/api/v1'));
+    test(
+      'defaultBaseUrl resolves according to current platform in test environment',
+      () {
+        final resolved = ApiConstants.defaultBaseUrl;
+        if (kIsWeb) {
+          expect(resolved, equals('http://localhost:3000/api/v1'));
+        } else {
+          switch (defaultTargetPlatform) {
+            case TargetPlatform.android:
+              expect(
+                resolved,
+                anyOf(
+                  equals('http://10.0.2.2:3000/api/v1'),
+                  equals('http://192.168.1.36:3000/api/v1'),
+                ),
+              );
+            case TargetPlatform.iOS:
+            case TargetPlatform.windows:
+            case TargetPlatform.macOS:
+            case TargetPlatform.linux:
+            case TargetPlatform.fuchsia:
+              expect(resolved, equals('http://localhost:3000/api/v1'));
+          }
         }
-      }
-    });
+      },
+    );
   });
 }

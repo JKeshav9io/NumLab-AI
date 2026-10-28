@@ -24,15 +24,27 @@ function renderBasicTemplate(doc, run) {
   // ----------------------------------------------------
   // 1. Header Banner & Branding
   // ----------------------------------------------------
-  doc
-    .rect(doc.page.margins.left, doc.y, pageWidth, 55)
-    .fill(primaryColor);
+  // Vector drawing does not advance PDFKit's text cursor. Measure the banner
+  // from its own origin, then resume normal body flow below its full height.
+  const headerTop = doc.y;
+  const headerPadding = 10;
+  const headerLeft = doc.page.margins.left + 15;
+  const headerTextWidth = pageWidth - 30;
+  doc.font('Helvetica-Bold').fontSize(18);
+  const headingHeight = doc.currentLineHeight(true);
+  const metadata = `Generated: ${new Date(run.createdAt || Date.now()).toUTCString()}  |  ID: ${run.id || 'N/A'}`;
+  doc.font('Helvetica').fontSize(9);
+  const metadataHeight = doc.heightOfString(metadata, { width: headerTextWidth });
+  const metadataTop = headerTop + headerPadding + headingHeight + 4;
+  const headerHeight = Math.max(55, metadataTop - headerTop + metadataHeight + headerPadding);
+
+  doc.rect(doc.page.margins.left, headerTop, pageWidth, headerHeight).fill(primaryColor);
 
   doc
     .fillColor('#ffffff')
     .font('Helvetica-Bold')
     .fontSize(18)
-    .text('NumLab AI', doc.page.margins.left + 15, doc.y - 45, { continued: true })
+    .text('NumLab AI', headerLeft, headerTop + headerPadding, { width: headerTextWidth, continued: true })
     .font('Helvetica')
     .fontSize(11)
     .fillColor('#93c5fd')
@@ -41,9 +53,11 @@ function renderBasicTemplate(doc, run) {
   doc
     .fontSize(9)
     .fillColor('#bfdbfe')
-    .text(`Generated: ${new Date(run.createdAt || Date.now()).toUTCString()}  |  ID: ${run.id || 'N/A'}`, doc.page.margins.left + 15, doc.y - 2);
+    .text(metadata, headerLeft, metadataTop, { width: headerTextWidth });
 
-  doc.moveDown(2);
+  doc.x = doc.page.margins.left;
+  doc.y = headerTop + headerHeight;
+  doc.moveDown();
 
   // ----------------------------------------------------
   // 2. Executive Summary / Run Overview
@@ -215,22 +229,23 @@ function renderBasicTemplate(doc, run) {
   // 9. Page Numbers in Footer
   // ----------------------------------------------------
   const range = doc.bufferedPageRange();
+  const bodyX = doc.x;
+  const bodyY = doc.y;
   for (let i = range.start; i < range.start + range.count; i++) {
     doc.switchToPage(i);
-    doc
-      .font('Helvetica')
-      .fontSize(8)
-      .fillColor('#9ca3af')
-      .text(
-        `NumLab AI Platform  •  Page ${i + 1} of ${range.count}`,
-        doc.page.margins.left,
-        doc.page.height - 30,
-        {
-          width: pageWidth,
-          align: 'center',
-        }
-      );
+    const footer = `NumLab AI Platform  •  Page ${i + 1} of ${range.count}`;
+    doc.font('Helvetica').fontSize(8).fillColor('#9ca3af');
+    const footerWidth = doc.widthOfString(footer);
+    const usableWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+    const footerY = doc.page.height - doc.page.margins.bottom / 2 - doc.currentLineHeight(true) / 2;
+    // This is page decoration, not flowing body text. Supplying a wrapping
+    // width here would re-enable the line wrapper below page.maxY() and create
+    // another page, even with lineBreak:false. Center the measured line instead.
+    doc.text(footer, doc.page.margins.left + (usableWidth - footerWidth) / 2, footerY, { lineBreak: false });
   }
+  doc.switchToPage(range.start + range.count - 1);
+  doc.x = bodyX;
+  doc.y = bodyY;
 }
 
 /**

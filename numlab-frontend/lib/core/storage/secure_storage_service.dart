@@ -41,17 +41,15 @@ class SecureStorageServiceImpl implements SecureStorageService {
     required String refreshToken,
   }) async {
     try {
-      await Future.wait([
-        _storage.write(key: _accessTokenKey, value: accessToken),
-        _storage.write(key: _refreshTokenKey, value: refreshToken),
-      ]);
+      // The web plugin initializes its encryption key asynchronously on first
+      // write. Finish that initialization before writing the second token.
+      await _storage.write(key: _accessTokenKey, value: accessToken);
+      await _storage.write(key: _refreshTokenKey, value: refreshToken);
     } on Object catch (_) {
       try {
         await _storage.deleteAll();
-        await Future.wait([
-          _storage.write(key: _accessTokenKey, value: accessToken),
-          _storage.write(key: _refreshTokenKey, value: refreshToken),
-        ]);
+        await _storage.write(key: _accessTokenKey, value: accessToken);
+        await _storage.write(key: _refreshTokenKey, value: refreshToken);
       } on Object catch (_) {
         // Silently handle if secure hardware storage is temporarily unavailable
       }

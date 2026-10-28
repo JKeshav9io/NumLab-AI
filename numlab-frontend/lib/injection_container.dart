@@ -10,6 +10,25 @@ import 'package:numlab_frontend/features/auth/data/repositories/auth_repository_
 import 'package:numlab_frontend/features/auth/domain/repositories/auth_repository.dart';
 import 'package:numlab_frontend/features/auth/domain/usecases/usecases.dart';
 import 'package:numlab_frontend/features/auth/presentation/bloc/bloc.dart';
+import 'package:numlab_frontend/features/explanations/data/datasources/datasources.dart';
+import 'package:numlab_frontend/features/explanations/data/repositories/repositories.dart';
+import 'package:numlab_frontend/features/explanations/domain/repositories/repositories.dart';
+import 'package:numlab_frontend/features/explanations/domain/usecases/usecases.dart';
+import 'package:numlab_frontend/features/explanations/presentation/bloc/bloc.dart';
+import 'package:numlab_frontend/features/history/data/datasources/datasources.dart';
+import 'package:numlab_frontend/features/history/data/repositories/repositories.dart';
+import 'package:numlab_frontend/features/history/domain/repositories/repositories.dart';
+import 'package:numlab_frontend/features/history/domain/usecases/usecases.dart';
+import 'package:numlab_frontend/features/history/presentation/bloc/bloc.dart';
+import 'package:numlab_frontend/features/reports/data/datasources/report_remote_data_source.dart';
+import 'package:numlab_frontend/features/reports/data/repositories/report_repository_impl.dart';
+import 'package:numlab_frontend/features/reports/domain/repositories/report_repository.dart';
+import 'package:numlab_frontend/features/reports/domain/usecases/usecases.dart';
+import 'package:numlab_frontend/features/reports/presentation/bloc/bloc.dart';
+import 'package:numlab_frontend/features/reports/presentation/bloc/report_delivery_bloc.dart';
+import 'package:numlab_frontend/features/reports/presentation/services/report_delivery.dart';
+import 'package:numlab_frontend/features/reports/presentation/services/report_preview_renderer.dart';
+import 'package:numlab_frontend/features/reports/presentation/services/report_sharing.dart';
 import 'package:numlab_frontend/features/solvers/data/datasources/solver_remote_data_source.dart';
 import 'package:numlab_frontend/features/solvers/data/repositories/solver_repository_impl.dart';
 import 'package:numlab_frontend/features/solvers/domain/repositories/solver_repository.dart';
@@ -110,6 +129,75 @@ Future<void> initDependencies() async {
     ..registerFactory<SolverFormBloc>(
       () => SolverFormBloc(
         executeSolverUseCase: sl<ExecuteSolverUseCase>(),
+      ),
+    )
+    // 7. History Feature (Data & Domain)
+    ..registerLazySingleton<HistoryRemoteDataSource>(
+      () => HistoryRemoteDataSourceImpl(dio: sl<Dio>()),
+    )
+    ..registerLazySingleton<HistoryRepository>(
+      () => HistoryRepositoryImpl(
+        remoteDataSource: sl<HistoryRemoteDataSource>(),
+      ),
+    )
+    ..registerLazySingleton<GetHistoryRunsUseCase>(
+      () => GetHistoryRunsUseCase(sl<HistoryRepository>()),
+    )
+    ..registerLazySingleton<GetHistoryRunByIdUseCase>(
+      () => GetHistoryRunByIdUseCase(sl<HistoryRepository>()),
+    )
+    ..registerFactory<HistoryBloc>(
+      () => HistoryBloc(
+        getHistoryRunsUseCase: sl<GetHistoryRunsUseCase>(),
+        getHistoryRunByIdUseCase: sl<GetHistoryRunByIdUseCase>(),
+      ),
+    )
+    // 8. Explanations Feature (Data, Domain & Presentation)
+    ..registerLazySingleton<ExplanationRemoteDataSource>(
+      () => ExplanationRemoteDataSourceImpl(dio: sl<Dio>()),
+    )
+    ..registerLazySingleton<ExplanationRepository>(
+      () => ExplanationRepositoryImpl(
+        remoteDataSource: sl<ExplanationRemoteDataSource>(),
+        secureStorageService: sl<SecureStorageService>(),
+      ),
+    )
+    ..registerLazySingleton<ExplainUseCase>(
+      () => ExplainUseCase(sl<ExplanationRepository>()),
+    )
+    ..registerFactory<ExplanationBloc>(
+      () => ExplanationBloc(
+        explainUseCase: sl<ExplainUseCase>(),
+      ),
+    )
+    // 9. Reports Feature (Data, Domain & Presentation BLoC)
+    ..registerLazySingleton<ReportRemoteDataSource>(
+      () => ReportRemoteDataSourceImpl(dio: sl<Dio>()),
+    )
+    ..registerLazySingleton<ReportRepository>(
+      () => ReportRepositoryImpl(
+        remoteDataSource: sl<ReportRemoteDataSource>(),
+      ),
+    )
+    ..registerLazySingleton<GenerateReportUseCase>(
+      () => GenerateReportUseCase(sl<ReportRepository>()),
+    )
+    ..registerFactory<ReportBloc>(
+      () => ReportBloc(generateReportUseCase: sl<GenerateReportUseCase>()),
+    )
+    ..registerLazySingleton<ReportDelivery>(
+      () => const FilePickerReportDelivery(),
+    )
+    ..registerLazySingleton<ReportPreviewRenderer>(
+      () => const PdfrxReportPreviewRenderer(),
+    )
+    ..registerLazySingleton<ReportSharing>(
+      SharePlusReportSharing.new,
+    )
+    ..registerFactory<ReportDeliveryBloc>(
+      () => ReportDeliveryBloc(
+        delivery: sl<ReportDelivery>(),
+        sharing: sl<ReportSharing>(),
       ),
     );
 }

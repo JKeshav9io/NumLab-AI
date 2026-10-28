@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:numlab_frontend/core/theme/app_colors.dart';
 import 'package:numlab_frontend/core/theme/app_spacing.dart';
 import 'package:numlab_frontend/core/theme/app_typography.dart';
+import 'package:numlab_frontend/features/explanations/presentation/widgets/explanation_content.dart';
 import 'package:numlab_frontend/features/solvers/domain/entities/solver_explanation.dart';
 
 /// Reusable explanation component displaying algorithmic or AI step-by-step reasoning.
 class SolverExplanationView extends StatelessWidget {
   const SolverExplanationView({
     required this.explanation,
+    this.title = 'Step-by-Step Explanation',
     super.key,
   });
 
   final SolverExplanation explanation;
+  final String title;
 
   @override
   Widget build(BuildContext context) {
@@ -37,21 +40,22 @@ class SolverExplanationView extends StatelessWidget {
                 size: 20,
               ),
               const SizedBox(width: AppSpacing.xs),
-              Text(
-                'Step-by-Step Explanation',
-                style: AppTypography.titleMedium.copyWith(
-                  color: AppColors.info,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTypography.titleMedium.copyWith(
+                    color: AppColors.info,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
           ),
           if (explanation.summary.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xs),
-            Text(
-              explanation.summary,
+            ExplanationContent(
+              content: explanation.summary,
               key: const Key('solver_explanation_summary'),
-              style: AppTypography.bodyMedium,
             ),
           ],
           if (explanation.steps.isNotEmpty) ...[

@@ -71,47 +71,61 @@ void main() {
       mockAuthBloc = MockAuthBloc(const AuthUnauthenticated());
     });
 
-    testWidgets('loads all 6 registered category cards with correct method counts', (
-      tester,
-    ) async {
-      await tester.pumpWidget(buildHomeScreen());
-      await tester.pumpAndSettle();
+    testWidgets(
+      'loads all 6 registered category cards with correct method counts',
+      (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildHomeScreen());
+        await tester.pumpAndSettle();
 
-      expect(find.text('Numerical Solver Workspaces'), findsOneWidget);
-      expect(find.text('Categories (6)'), findsOneWidget);
+        expect(find.text('Numerical Solver Workspaces'), findsOneWidget);
+        expect(find.text('Categories (6)'), findsOneWidget);
 
-      for (final category in SolverCategory.values) {
-        expect(
-          find.byKey(Key('category_card_${category.id}')),
-          findsOneWidget,
-        );
-        expect(find.text(category.displayName), findsOneWidget);
-        final count = SolverMethodRegistry.getByCategory(category).length;
-        final badge = find.byKey(Key('category_methods_badge_${category.id}'));
-        expect(badge, findsOneWidget);
-        final badgeWidget = tester.widget<Text>(badge);
-        expect(badgeWidget.data, equals('$count methods'));
-      }
-    });
+        for (final category in SolverCategory.values) {
+          expect(
+            find.byKey(Key('category_card_${category.id}')),
+            findsOneWidget,
+          );
+          expect(find.text(category.displayName), findsOneWidget);
+          final count = SolverMethodRegistry.getByCategory(category).length;
+          final badge = find.byKey(
+            Key('category_methods_badge_${category.id}'),
+          );
+          expect(badge, findsOneWidget);
+          final badgeWidget = tester.widget<Text>(badge);
+          expect(badgeWidget.data, equals('$count methods'));
+        }
+      },
+    );
 
-    testWidgets('each category card has correct title, description, and badge', (
-      tester,
-    ) async {
-      await tester.pumpWidget(buildHomeScreen());
-      await tester.pumpAndSettle();
+    testWidgets(
+      'each category card has correct title, description, and badge',
+      (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildHomeScreen());
+        await tester.pumpAndSettle();
 
-      for (final category in SolverCategory.values) {
-        final cardFinder = find.byKey(Key('category_card_${category.id}'));
-        await tester.ensureVisible(cardFinder);
+        for (final category in SolverCategory.values) {
+          final cardFinder = find.byKey(Key('category_card_${category.id}'));
+          await tester.ensureVisible(cardFinder);
 
-        expect(find.byKey(Key('category_title_${category.id}')), findsOneWidget);
-        expect(find.byKey(Key('category_desc_${category.id}')), findsOneWidget);
-        expect(
-          find.byKey(Key('category_methods_badge_${category.id}')),
-          findsOneWidget,
-        );
-      }
-    });
+          expect(
+            find.byKey(Key('category_title_${category.id}')),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(Key('category_desc_${category.id}')),
+            findsOneWidget,
+          );
+          expect(
+            find.byKey(Key('category_methods_badge_${category.id}')),
+            findsOneWidget,
+          );
+        }
+      },
+    );
   });
 
   group('HomeScreen Authentication & User State Display Tests', () {
@@ -222,50 +236,53 @@ void main() {
   });
 
   group('HomeScreen Category Selection & Navigation Integration Tests', () {
-    testWidgets('tapping category card navigates to /workspace/:categoryId route', (
-      tester,
-    ) async {
-      mockAuthBloc = MockAuthBloc(const AuthUnauthenticated());
+    testWidgets(
+      'tapping category card navigates to /workspace/:categoryId route',
+      (
+        tester,
+      ) async {
+        mockAuthBloc = MockAuthBloc(const AuthUnauthenticated());
 
-      String? pushedRoute;
-      final router = GoRouter(
-        initialLocation: AppRoutes.home,
-        routes: [
-          GoRoute(
-            path: AppRoutes.home,
-            builder: (context, state) => BlocProvider<AuthBloc>.value(
-              value: mockAuthBloc,
-              child: const HomeScreen(),
+        String? pushedRoute;
+        final router = GoRouter(
+          initialLocation: AppRoutes.home,
+          routes: [
+            GoRoute(
+              path: AppRoutes.home,
+              builder: (context, state) => BlocProvider<AuthBloc>.value(
+                value: mockAuthBloc,
+                child: const HomeScreen(),
+              ),
             ),
-          ),
-          GoRoute(
-            path: '${AppRoutes.workspacePrefix}/:categoryId',
-            builder: (context, state) {
-              pushedRoute = state.uri.toString();
-              return Scaffold(
-                body: Text(
-                  'Workspace: ${state.pathParameters['categoryId']}',
-                ),
-              );
-            },
-          ),
-        ],
-      );
+            GoRoute(
+              path: '${AppRoutes.workspacePrefix}/:categoryId',
+              builder: (context, state) {
+                pushedRoute = state.uri.toString();
+                return Scaffold(
+                  body: Text(
+                    'Workspace: ${state.pathParameters['categoryId']}',
+                  ),
+                );
+              },
+            ),
+          ],
+        );
 
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+        await tester.pumpAndSettle();
 
-      // Tap on Root Finding Category Card
-      final rootCard = find.byKey(
-        Key('category_card_${SolverCategory.rootFinding.id}'),
-      );
-      expect(rootCard, findsOneWidget);
-      await tester.tap(rootCard);
-      await tester.pumpAndSettle();
+        // Tap on Root Finding Category Card
+        final rootCard = find.byKey(
+          Key('category_card_${SolverCategory.rootFinding.id}'),
+        );
+        expect(rootCard, findsOneWidget);
+        await tester.tap(rootCard);
+        await tester.pumpAndSettle();
 
-      expect(pushedRoute, equals('/workspace/root-finding'));
-      expect(find.text('Workspace: root-finding'), findsOneWidget);
-    });
+        expect(pushedRoute, equals('/workspace/root-finding'));
+        expect(find.text('Workspace: root-finding'), findsOneWidget);
+      },
+    );
 
     testWidgets(
       'all 6 solver categories can be tapped and reach their workspace route',

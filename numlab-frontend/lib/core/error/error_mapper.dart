@@ -7,10 +7,21 @@ Failure mapExceptionToFailure(Object exception, [StackTrace? stackTrace]) {
   if (exception is DioException) {
     switch (exception.type) {
       case DioExceptionType.connectionTimeout:
+        return const NetworkFailure(
+          message:
+              'Unable to connect to NumLab server: the connection timed out. Please try again.',
+          code: 'REQUEST_TIMEOUT',
+        );
+
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-      case DioExceptionType.connectionError:
       case DioExceptionType.transformTimeout:
+        return const NetworkFailure(
+          message: 'The request timed out. Please try again.',
+          code: 'REQUEST_TIMEOUT',
+        );
+
+      case DioExceptionType.connectionError:
         return const NetworkFailure(
           message:
               'Unable to connect to NumLab server. Please check your connection.',
@@ -18,6 +29,23 @@ Failure mapExceptionToFailure(Object exception, [StackTrace? stackTrace]) {
 
       case DioExceptionType.badResponse:
         final response = exception.response;
+        // The route limiter can return a plain-text 429 instead of an envelope.
+        if (response?.statusCode == 429) {
+          final body = response!.data;
+          final error = body is Map ? body['error'] : null;
+          return RateLimitFailure(
+            message: error is Map && error['message'] is String
+                ? error['message'] as String
+                : 'Too many requests. Please wait before trying again.',
+            code: error is Map && error['code'] is String
+                ? error['code'] as String
+                : 'RATE_LIMIT_EXCEEDED',
+            retryAfterSeconds: _retryAfterSeconds(
+              response,
+              error is Map ? error['details'] : null,
+            ),
+          );
+        }
         if (response != null && response.data is Map<String, dynamic>) {
           final data = response.data as Map<String, dynamic>;
           final errorObj = data['error'];
@@ -33,25 +61,27 @@ Failure mapExceptionToFailure(Object exception, [StackTrace? stackTrace]) {
               return RateLimitFailure(
                 message: message,
                 code: code,
+                retryAfterSeconds: _retryAfterSeconds(response, details),
               );
             }
 
             // 2. Validation Errors (400)
             if (code == 'VALIDATION_ERROR') {
               final fieldErrors = <FieldError>[];
-              if (details is Map<String, dynamic>) {
-                final fieldsList = details['fields'] ?? details['errors'];
-                if (fieldsList is List) {
-                  for (final item in fieldsList) {
-                    if (item is Map<String, dynamic>) {
-                      fieldErrors.add(FieldError.fromJson(item));
-                    }
-                  }
-                }
-              } else if (details is List) {
-                for (final item in details) {
-                  if (item is Map<String, dynamic>) {
+              // The report UUID validator uses details.details: [string],
+              // unlike solver field maps. Retain messages without inventing
+              // field names, and ignore malformed fields rather than casting.
+              final fieldsList = details is Map<String, dynamic>
+                  ? details['fields'] ?? details['errors'] ?? details['details']
+                  : details;
+              if (fieldsList is List) {
+                for (final item in fieldsList) {
+                  if (item is Map<String, dynamic> &&
+                      (item['field'] == null || item['field'] is String) &&
+                      (item['message'] == null || item['message'] is String)) {
                     fieldErrors.add(FieldError.fromJson(item));
+                  } else if (item is String) {
+                    fieldErrors.add(FieldError(field: '', message: item));
                   }
                 }
               }
@@ -108,6 +138,27 @@ Failure mapExceptionToFailure(Object exception, [StackTrace? stackTrace]) {
   return ServerFailure(
     message: exception.toString(),
   );
+}
+
+int? _retryAfterSeconds(Response<dynamic> response, Object? details) {
+  final bodySeconds = _nonNegativeSeconds(
+    details is Map ? details['retryAfterSeconds'] : null,
+  );
+  final headerSeconds = _nonNegativeSeconds(
+    response.headers['retry-after']?.firstOrNull,
+  );
+  if (bodySeconds == null) return headerSeconds;
+  if (headerSeconds == null) return bodySeconds;
+  // Respect both supplied constraints if they differ.
+  return bodySeconds > headerSeconds ? bodySeconds : headerSeconds;
+}
+
+int? _nonNegativeSeconds(Object? value) {
+  if (value is int && value >= 0) return value;
+  if (value is String && RegExp(r'^\d+$').hasMatch(value.trim())) {
+    return int.tryParse(value.trim());
+  }
+  return null;
 }
 
 String _formatFriendlySolverMessage(String code, String rawMessage) {

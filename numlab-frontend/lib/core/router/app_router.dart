@@ -5,7 +5,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:numlab_frontend/features/auth/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/auth/presentation/screens/screens.dart';
+import 'package:numlab_frontend/features/history/presentation/pages/pages.dart';
 import 'package:numlab_frontend/features/profile/presentation/profile_screen.dart';
+import 'package:numlab_frontend/features/reports/presentation/pages/report_preview_page.dart';
 import 'package:numlab_frontend/features/solvers/domain/models/models.dart';
 import 'package:numlab_frontend/features/solvers/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/solvers/presentation/screens/screens.dart';
@@ -21,6 +23,11 @@ abstract final class AppRoutes {
   static const String history = '/history';
   static const String profile = '/profile';
 
+  /// Builds a history detail path for the specified [runId].
+  static String historyDetail(String runId) => '$history/$runId';
+
+  static String reportPreview(String runId) => '${historyDetail(runId)}/report';
+
   /// Builds a solver path for the specified [id].
   static String solver(String id) => '$solverPrefix/$id';
 
@@ -35,18 +42,28 @@ abstract final class AppRoutes {
 
   /// Returns true if [location] requires an authenticated session.
   static bool isProtectedRoute(String location) {
-    return location == profile ||
-        location.startsWith('$profile/') ||
-        location == history ||
-        location.startsWith('$history/');
+    final cleanPath = Uri.tryParse(location)?.path ?? location;
+    final normalized = cleanPath.endsWith('/') && cleanPath.length > 1
+        ? cleanPath.substring(0, cleanPath.length - 1)
+        : cleanPath;
+
+    return normalized == profile ||
+        normalized.startsWith('$profile/') ||
+        normalized == history ||
+        normalized.startsWith('$history/');
   }
 
   /// Returns true if [location] is an authentication entry route.
   static bool isAuthRoute(String location) {
-    return location == login ||
-        location.startsWith('$login/') ||
-        location == register ||
-        location.startsWith('$register/');
+    final cleanPath = Uri.tryParse(location)?.path ?? location;
+    final normalized = cleanPath.endsWith('/') && cleanPath.length > 1
+        ? cleanPath.substring(0, cleanPath.length - 1)
+        : cleanPath;
+
+    return normalized == login ||
+        normalized.startsWith('$login/') ||
+        normalized == register ||
+        normalized.startsWith('$register/');
   }
 }
 
@@ -141,10 +158,32 @@ class AppRouter {
         GoRoute(
           path: AppRoutes.history,
           name: 'history',
-          builder: (context, state) => const Scaffold(
-            key: Key('history_screen'),
-            body: Center(child: Text('History Screen')),
-          ),
+          builder: (context, state) => const HistoryPage(),
+          routes: [
+            GoRoute(
+              path: ':runId',
+              name: 'historyDetail',
+              builder: (context, state) {
+                final runId = state.pathParameters['runId'] ?? '';
+                return HistoryDetailPage(runId: runId);
+              },
+              routes: [
+                GoRoute(
+                  path: 'report',
+                  name: 'reportPreview',
+                  builder: (context, state) => BlocProvider.value(
+                    value: _authBloc,
+                    child: ReportPreviewPage(
+                      runId: state.pathParameters['runId'] ?? '',
+                      session: state.extra is ReportPreviewSession
+                          ? state.extra! as ReportPreviewSession
+                          : null,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ],
       errorBuilder: (context, state) => Scaffold(
@@ -169,8 +208,14 @@ class AppRouter {
     final isAuth = authState is AuthAuthenticated;
     final isInitializing = authState is AuthInitial || authState is AuthLoading;
 
-    final isProtected = AppRoutes.isProtectedRoute(matchedLocation);
-    final isAuthPath = AppRoutes.isAuthRoute(matchedLocation);
+    final isProtected =
+        AppRoutes.isProtectedRoute(matchedLocation) ||
+        AppRoutes.isProtectedRoute(state.uri.path) ||
+        AppRoutes.isProtectedRoute(state.uri.toString());
+    final isAuthPath =
+        AppRoutes.isAuthRoute(matchedLocation) ||
+        AppRoutes.isAuthRoute(state.uri.path) ||
+        AppRoutes.isAuthRoute(state.uri.toString());
 
     // 1. Session restoration / initial loading:
     // Must NOT cause premature or incorrect redirects before session state is determined.
@@ -191,6 +236,8 @@ class AppRouter {
       final fromParam = state.uri.queryParameters['from'];
       if (fromParam != null &&
           fromParam.isNotEmpty &&
+          fromParam.startsWith('/') &&
+          !fromParam.startsWith('//') &&
           !fromParam.startsWith(AppRoutes.login) &&
           !fromParam.startsWith(AppRoutes.register)) {
         return Uri.decodeComponent(fromParam);

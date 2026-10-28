@@ -5,6 +5,19 @@ import 'package:numlab_frontend/core/constants/api_constants.dart';
 import 'package:numlab_frontend/core/storage/secure_storage_service.dart';
 import 'package:numlab_frontend/features/auth/data/models/token_model.dart';
 
+/// Keeps a failed replay from waiting behind its original queued auth error.
+/// Register before [AuthInterceptor]; its original handler forwards the caught
+/// replay failure to the remaining error/logging interceptors exactly once.
+class AuthRetryErrorInterceptor extends Interceptor {
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    if (err.requestOptions.extra[AuthInterceptor.retryCountExtraKey] == 1) {
+      return handler.reject(err);
+    }
+    handler.next(err);
+  }
+}
+
 /// Interceptor for Bearer token injection, silent token refresh, and request retry queuing.
 ///
 /// Lifecycle:

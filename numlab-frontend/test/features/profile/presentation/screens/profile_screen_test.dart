@@ -496,6 +496,47 @@ void main() {
     });
 
     testWidgets(
+      'Home → Profile → Android back → returns to Home (regression)',
+      (tester) async {
+        mockAuthBloc = MockAuthBloc(AuthAuthenticated(user: tUser));
+        appRouter = AppRouter(
+          authBloc: mockAuthBloc,
+          initialLocation: AppRoutes.home,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp.router(
+            routerConfig: appRouter.router,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Verify we start on Home
+        expect(find.byKey(const Key('home_screen')), findsOneWidget);
+        expect(find.byKey(const Key('profile_screen')), findsNothing);
+
+        // Navigate to Profile via the banner Profile button (context.push)
+        await tester.tap(find.byKey(const Key('home_to_profile_button')));
+        await tester.pumpAndSettle();
+
+        // Verify Profile is now visible
+        expect(find.byKey(const Key('profile_screen')), findsOneWidget);
+        expect(find.byKey(const Key('home_screen')), findsNothing);
+
+        // Simulate Android system back button press by tapping the explicit
+        // back button in Profile's AppBar (context.go back to Home).
+        expect(find.byKey(const Key('profile_back_button')), findsOneWidget);
+        await tester.tap(find.byKey(const Key('profile_back_button')));
+        await tester.pumpAndSettle();
+
+        // Must return to Home, not exit the app
+        expect(find.byKey(const Key('home_screen')), findsOneWidget);
+        expect(find.byKey(const Key('profile_screen')), findsNothing);
+        expect(find.byKey(const Key('login_screen')), findsNothing);
+      },
+    );
+
+    testWidgets(
       'Complete auth loop: Login -> Home -> Profile -> Refresh -> Logout -> Login',
       (tester) async {
         mockAuthBloc = MockAuthBloc(const AuthUnauthenticated());
@@ -548,7 +589,7 @@ void main() {
           contains(const AuthLogoutRequested()),
         );
 
-        // 7. AuthBloc emits unauthenticated -> Router redirects to Login
+        // 7. AuthBloc emits unauthenticated → Router guard redirects to /login.
         mockAuthBloc.emitState(const AuthUnauthenticated());
         await tester.pumpAndSettle();
 
