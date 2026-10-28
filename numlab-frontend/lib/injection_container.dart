@@ -14,6 +14,7 @@ import 'package:numlab_frontend/features/history/data/datasources/datasources.da
 import 'package:numlab_frontend/features/history/data/repositories/repositories.dart';
 import 'package:numlab_frontend/features/history/domain/repositories/repositories.dart';
 import 'package:numlab_frontend/features/history/domain/usecases/usecases.dart';
+import 'package:numlab_frontend/features/history/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/solvers/data/datasources/solver_remote_data_source.dart';
 import 'package:numlab_frontend/features/solvers/data/repositories/solver_repository_impl.dart';
 import 'package:numlab_frontend/features/solvers/domain/repositories/solver_repository.dart';
@@ -131,7 +132,12 @@ Future<void> initDependencies() async {
     ..registerLazySingleton<GetHistoryRunByIdUseCase>(
       () => GetHistoryRunByIdUseCase(sl<HistoryRepository>()),
     )
-
+    ..registerFactory<HistoryBloc>(
+      () => HistoryBloc(
+        getHistoryRunsUseCase: sl<GetHistoryRunsUseCase>(),
+        getHistoryRunByIdUseCase: sl<GetHistoryRunByIdUseCase>(),
+      ),
+    )
     // 8. Explanations Feature (Data, Domain & Presentation)
 
 
