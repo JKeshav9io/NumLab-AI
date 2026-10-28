@@ -25,6 +25,8 @@ import 'package:numlab_frontend/features/reports/data/repositories/report_reposi
 import 'package:numlab_frontend/features/reports/domain/repositories/report_repository.dart';
 import 'package:numlab_frontend/features/reports/domain/usecases/usecases.dart';
 import 'package:numlab_frontend/features/reports/presentation/bloc/bloc.dart';
+import 'package:numlab_frontend/features/reports/presentation/bloc/report_delivery_bloc.dart';
+import 'package:numlab_frontend/features/reports/presentation/services/report_delivery.dart';
 import 'package:numlab_frontend/features/solvers/data/datasources/solver_remote_data_source.dart';
 import 'package:numlab_frontend/features/solvers/data/repositories/solver_repository_impl.dart';
 import 'package:numlab_frontend/features/solvers/domain/repositories/solver_repository.dart';
@@ -181,8 +183,14 @@ Future<void> initDependencies() async {
     ..registerFactory<ReportBloc>(
       () => ReportBloc(generateReportUseCase: sl<GenerateReportUseCase>()),
     )
+    ..registerLazySingleton<ReportDelivery>(
+      () => const FilePickerReportDelivery(),
+    )
 
 
-
-;
+    ..registerFactory<ReportDeliveryBloc>(
+      () => ReportDeliveryBloc(
+        delivery: sl<ReportDelivery>(),
+      ),
+    );
 }

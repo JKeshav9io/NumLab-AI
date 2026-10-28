@@ -8,6 +8,8 @@ import 'package:numlab_frontend/features/reports/domain/entities/pdf_report.dart
 import 'package:numlab_frontend/features/reports/domain/repositories/report_repository.dart';
 import 'package:numlab_frontend/features/reports/domain/usecases/usecases.dart';
 import 'package:numlab_frontend/features/reports/presentation/bloc/bloc.dart';
+import 'package:numlab_frontend/features/reports/presentation/bloc/report_delivery_bloc.dart';
+import 'package:numlab_frontend/features/reports/presentation/services/report_delivery.dart';
 import 'package:numlab_frontend/injection_container.dart';
 
 import 'report_test_support.dart';
@@ -46,7 +48,17 @@ void main() {
 
 
 
-
+  test('registers one delivery adapter and isolated delivery BLoCs', () async {
+    expect(sl<ReportDelivery>(), isA<FilePickerReportDelivery>());
+    expect(sl<ReportDelivery>(), same(sl<ReportDelivery>()));
+    final first = sl<ReportDeliveryBloc>();
+    final second = sl<ReportDeliveryBloc>();
+    expect(first, isNot(same(second)));
+    expect(first.state, const ReportDeliveryInitial());
+    expect(second.state, const ReportDeliveryInitial());
+    await first.close();
+    await second.close();
+  });
 
   test('registers the report use case as a lazy singleton', () {
     expect(sl.isRegistered<GenerateReportUseCase>(), isTrue);

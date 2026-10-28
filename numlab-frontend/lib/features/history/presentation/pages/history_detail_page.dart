@@ -7,6 +7,7 @@ import 'package:numlab_frontend/core/theme/app_spacing.dart';
 import 'package:numlab_frontend/core/theme/app_typography.dart';
 import 'package:numlab_frontend/features/history/domain/entities/history_run.dart';
 import 'package:numlab_frontend/features/history/presentation/bloc/bloc.dart';
+import 'package:numlab_frontend/features/reports/presentation/widgets/report_actions.dart';
 import 'package:numlab_frontend/features/solvers/domain/entities/solver_explanation.dart';
 import 'package:numlab_frontend/features/solvers/domain/entities/solver_result.dart';
 import 'package:numlab_frontend/features/solvers/presentation/widgets/result/solver_explanation_view.dart';
@@ -160,6 +161,7 @@ class _HistoryDetailPageViewState extends State<_HistoryDetailPageView> {
                 steps: const [],
               ),
             ),
+          ReportActions(run: run),
         ],
       ),
     );
