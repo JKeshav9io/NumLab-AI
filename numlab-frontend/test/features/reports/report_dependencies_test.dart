@@ -7,6 +7,7 @@ import 'package:numlab_frontend/features/reports/data/datasources/report_remote_
 import 'package:numlab_frontend/features/reports/domain/entities/pdf_report.dart';
 import 'package:numlab_frontend/features/reports/domain/repositories/report_repository.dart';
 import 'package:numlab_frontend/features/reports/domain/usecases/usecases.dart';
+import 'package:numlab_frontend/features/reports/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/injection_container.dart';
 
 import 'report_test_support.dart';
@@ -52,7 +53,38 @@ void main() {
     expect(sl<GenerateReportUseCase>(), same(sl<GenerateReportUseCase>()));
   });
 
-
+  test(
+    'report BLoC factory creates isolated instances using the existing use case',
+    () async {
+      final repository = FakeDomainReportRepository();
+      await sl.unregister<ReportRepository>();
+      sl.registerSingleton<ReportRepository>(repository);
+      final adapter = ReportAdapter(
+        (_) async => throw StateError('Unexpected HTTP request'),
+      );
+      sl<Dio>().httpClientAdapter = adapter;
+      expect(sl.isRegistered<ReportBloc>(), isTrue);
+      final first = sl<ReportBloc>();
+      final second = sl<ReportBloc>();
+      try {
+        expect(first, isNot(same(second)));
+        first.add(const ReportRequested(runId: reportRunId));
+        await expectLater(
+          first.stream,
+          emitsInOrder([
+            const ReportLoading(runId: reportRunId),
+            ReportSuccess(runId: reportRunId, report: repository.report),
+          ]),
+        );
+        expect(second.state, const ReportInitial());
+        expect(repository.runIds, [reportRunId]);
+        expect(adapter.requests, isEmpty);
+      } finally {
+        await first.close();
+        await second.close();
+      }
+    },
+  );
 
   test(
     'registered use case delegates to the registered repository without HTTP',
