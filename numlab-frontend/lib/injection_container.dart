@@ -10,6 +10,10 @@ import 'package:numlab_frontend/features/auth/data/repositories/auth_repository_
 import 'package:numlab_frontend/features/auth/domain/repositories/auth_repository.dart';
 import 'package:numlab_frontend/features/auth/domain/usecases/usecases.dart';
 import 'package:numlab_frontend/features/auth/presentation/bloc/bloc.dart';
+import 'package:numlab_frontend/features/explanations/data/datasources/datasources.dart';
+import 'package:numlab_frontend/features/explanations/data/repositories/repositories.dart';
+import 'package:numlab_frontend/features/explanations/domain/repositories/repositories.dart';
+import 'package:numlab_frontend/features/explanations/domain/usecases/usecases.dart';
 import 'package:numlab_frontend/features/history/data/datasources/datasources.dart';
 import 'package:numlab_frontend/features/history/data/repositories/repositories.dart';
 import 'package:numlab_frontend/features/history/domain/repositories/repositories.dart';
@@ -139,9 +143,18 @@ Future<void> initDependencies() async {
       ),
     )
     // 8. Explanations Feature (Data, Domain & Presentation)
-
-
-
+    ..registerLazySingleton<ExplanationRemoteDataSource>(
+      () => ExplanationRemoteDataSourceImpl(dio: sl<Dio>()),
+    )
+    ..registerLazySingleton<ExplanationRepository>(
+      () => ExplanationRepositoryImpl(
+        remoteDataSource: sl<ExplanationRemoteDataSource>(),
+        secureStorageService: sl<SecureStorageService>(),
+      ),
+    )
+    ..registerLazySingleton<ExplainUseCase>(
+      () => ExplainUseCase(sl<ExplanationRepository>()),
+    )
 
 
 

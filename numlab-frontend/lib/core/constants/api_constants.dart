@@ -15,8 +15,9 @@ abstract final class ApiConstants {
   static const String _envBaseUrl = String.fromEnvironment('API_BASE_URL');
   static const String _envHost = String.fromEnvironment('API_HOST');
   static const String _envHostIp = String.fromEnvironment('HOST_IP');
-  static const bool _isPhysicalDevice =
-      bool.fromEnvironment('IS_PHYSICAL_DEVICE');
+  static const bool _isPhysicalDevice = bool.fromEnvironment(
+    'IS_PHYSICAL_DEVICE',
+  );
   static const bool _isPhysical = bool.fromEnvironment('PHYSICAL_DEVICE');
 
   // Network Host & Port Constants
@@ -75,6 +76,9 @@ abstract final class ApiConstants {
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 15);
   static const Duration sendTimeout = Duration(seconds: 15);
+
+  /// Allows three 15s provider attempts, 900ms backoff, and server overhead.
+  static const Duration explanationReceiveTimeout = Duration(seconds: 60);
 
   // Common Headers
   static const String authHeader = 'Authorization';
