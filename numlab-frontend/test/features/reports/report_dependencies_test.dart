@@ -1,11 +1,26 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:fpdart/fpdart.dart';
+import 'package:numlab_frontend/core/error/failures.dart';
 import 'package:numlab_frontend/core/storage/secure_storage_service.dart';
 import 'package:numlab_frontend/features/reports/data/datasources/report_remote_data_source.dart';
+import 'package:numlab_frontend/features/reports/domain/entities/pdf_report.dart';
 import 'package:numlab_frontend/features/reports/domain/repositories/report_repository.dart';
+import 'package:numlab_frontend/features/reports/domain/usecases/usecases.dart';
 import 'package:numlab_frontend/injection_container.dart';
 
 import 'report_test_support.dart';
+
+class FakeDomainReportRepository extends Fake implements ReportRepository {
+  final report = PdfReport(bytes: const [1, 2, 3]);
+  final runIds = <String>[];
+
+  @override
+  Future<Either<Failure, PdfReport>> generateReport(String runId) async {
+    runIds.add(runId);
+    return Right(report);
+  }
+}
 
 void main() {
   setUp(() async {
@@ -32,11 +47,31 @@ void main() {
 
 
 
+  test('registers the report use case as a lazy singleton', () {
+    expect(sl.isRegistered<GenerateReportUseCase>(), isTrue);
+    expect(sl<GenerateReportUseCase>(), same(sl<GenerateReportUseCase>()));
+  });
 
 
 
+  test(
+    'registered use case delegates to the registered repository without HTTP',
+    () async {
+      final repository = FakeDomainReportRepository();
+      await sl.unregister<ReportRepository>();
+      sl.registerSingleton<ReportRepository>(repository);
+      final adapter = ReportAdapter(
+        (_) async => throw StateError('Unexpected HTTP request'),
+      );
+      sl<Dio>().httpClientAdapter = adapter;
 
+      final result = await sl<GenerateReportUseCase>()(reportRunId);
 
+      expect(repository.runIds, [reportRunId]);
+      expect(result, Right<Failure, PdfReport>(repository.report));
+      expect(adapter.requests, isEmpty);
+    },
+  );
 
   test(
     'registered repository uses the existing configured Dio and auth',
