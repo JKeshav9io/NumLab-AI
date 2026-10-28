@@ -95,7 +95,9 @@ void main() {
           );
 
           // Expand the iterations ExpansionTile
-          await tester.tap(find.byKey(const Key('solver_iterations_expansion_tile')));
+          await tester.tap(
+            find.byKey(const Key('solver_iterations_expansion_tile')),
+          );
           await tester.pumpAndSettle();
 
           expect(find.byType(DataTable), findsOneWidget);
@@ -122,7 +124,9 @@ void main() {
             ),
           );
 
-          await tester.tap(find.byKey(const Key('solver_iterations_expansion_tile')));
+          await tester.tap(
+            find.byKey(const Key('solver_iterations_expansion_tile')),
+          );
           await tester.pumpAndSettle();
 
           expect(find.byType(DataTable), findsOneWidget);
@@ -150,7 +154,9 @@ void main() {
             ),
           );
 
-          await tester.tap(find.byKey(const Key('solver_iterations_expansion_tile')));
+          await tester.tap(
+            find.byKey(const Key('solver_iterations_expansion_tile')),
+          );
           await tester.pumpAndSettle();
 
           expect(find.byType(DataTable), findsOneWidget);
@@ -234,19 +240,22 @@ void main() {
         );
       });
 
-      test('normalizes standard function names such as Sin -> sin, COS -> cos in equation payloads', () {
-        final raw = <String, dynamic>{
-          'equation': 'Sin(x) + COS(x) - Exp(x) * Sqrt(x)',
-          'x0': 0.0,
-        };
+      test(
+        'normalizes standard function names such as Sin -> sin, COS -> cos in equation payloads',
+        () {
+          final raw = <String, dynamic>{
+            'equation': 'Sin(x) + COS(x) - Exp(x) * Sqrt(x)',
+            'x0': 0.0,
+          };
 
-        final sanitized = SolverMethodConfig.sanitizePayload(raw);
+          final sanitized = SolverMethodConfig.sanitizePayload(raw);
 
-        expect(
-          sanitized['equation'],
-          equals('sin(x) + cos(x) - exp(x) * sqrt(x)'),
-        );
-      });
+          expect(
+            sanitized['equation'],
+            equals('sin(x) + cos(x) - exp(x) * sqrt(x)'),
+          );
+        },
+      );
     });
   });
 }

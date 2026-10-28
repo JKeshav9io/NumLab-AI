@@ -79,28 +79,32 @@ void main() {
       expect(SolverMethodRegistry.all.length, equals(27));
     });
 
-    test('each of the 27 methods belongs to exactly one of the 6 categories', () {
-      final categoryCounts = <SolverCategory, int>{};
-      for (final category in SolverCategory.values) {
-        categoryCounts[category] = 0;
-      }
+    test(
+      'each of the 27 methods belongs to exactly one of the 6 categories',
+      () {
+        final categoryCounts = <SolverCategory, int>{};
+        for (final category in SolverCategory.values) {
+          categoryCounts[category] = 0;
+        }
 
-      for (final method in SolverMethodRegistry.all) {
-        expect(SolverCategory.values.contains(method.category), isTrue);
-        categoryCounts[method.category] = categoryCounts[method.category]! + 1;
-      }
+        for (final method in SolverMethodRegistry.all) {
+          expect(SolverCategory.values.contains(method.category), isTrue);
+          categoryCounts[method.category] =
+              categoryCounts[method.category]! + 1;
+        }
 
-      // Assert expected counts per mathematical category
-      expect(categoryCounts[SolverCategory.rootFinding], equals(4));
-      expect(categoryCounts[SolverCategory.linearAlgebra], equals(3));
-      expect(categoryCounts[SolverCategory.interpolation], equals(7));
-      expect(categoryCounts[SolverCategory.ode], equals(4));
-      expect(categoryCounts[SolverCategory.integration], equals(4));
-      expect(categoryCounts[SolverCategory.differentiation], equals(5));
+        // Assert expected counts per mathematical category
+        expect(categoryCounts[SolverCategory.rootFinding], equals(4));
+        expect(categoryCounts[SolverCategory.linearAlgebra], equals(3));
+        expect(categoryCounts[SolverCategory.interpolation], equals(7));
+        expect(categoryCounts[SolverCategory.ode], equals(4));
+        expect(categoryCounts[SolverCategory.integration], equals(4));
+        expect(categoryCounts[SolverCategory.differentiation], equals(5));
 
-      final total = categoryCounts.values.reduce((a, b) => a + b);
-      expect(total, equals(27));
-    });
+        final total = categoryCounts.values.reduce((a, b) => a + b);
+        expect(total, equals(27));
+      },
+    );
 
     test('every method is reachable from its category resolution', () {
       for (final category in SolverCategory.values) {
@@ -145,90 +149,116 @@ void main() {
       );
     }
 
-    testWidgets('renders wide selector with choice chips on wide screen (>= 600px)', (
-      tester,
-    ) async {
-      solverFormBloc = SolverFormBloc(
-        executeSolverUseCase: mockExecuteSolverUseCase,
-      );
-      tester.view.physicalSize = const Size(800, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
+    testWidgets(
+      'renders wide selector with choice chips on wide screen (>= 600px)',
+      (
+        tester,
+      ) async {
+        solverFormBloc = SolverFormBloc(
+          executeSolverUseCase: mockExecuteSolverUseCase,
+        );
+        tester.view.physicalSize = const Size(800, 900);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
 
-      await tester.pumpWidget(
-        buildWorkspace(
-          categoryId: 'root-finding',
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          buildWorkspace(
+            categoryId: 'root-finding',
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('solver_workspace_screen')), findsOneWidget);
-      expect(find.byKey(const Key('category_workspace_title')), findsOneWidget);
-      expect(find.text('Root Finding'), findsWidgets);
-      expect(find.byKey(const Key('method_selector_wide')), findsOneWidget);
-      expect(find.byKey(const Key('method_selector_compact')), findsNothing);
+        expect(
+          find.byKey(const Key('solver_workspace_screen')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('category_workspace_title')),
+          findsOneWidget,
+        );
+        expect(find.text('Root Finding'), findsWidgets);
+        expect(find.byKey(const Key('method_selector_wide')), findsOneWidget);
+        expect(find.byKey(const Key('method_selector_compact')), findsNothing);
 
-      // Verify all Root Finding methods are rendered as chips
-      final methods = SolverMethodRegistry.getByCategory(SolverCategory.rootFinding);
-      for (final m in methods) {
-        expect(find.byKey(Key('method_chip_${m.id}')), findsOneWidget);
-      }
+        // Verify all Root Finding methods are rendered as chips
+        final methods = SolverMethodRegistry.getByCategory(
+          SolverCategory.rootFinding,
+        );
+        for (final m in methods) {
+          expect(find.byKey(Key('method_chip_${m.id}')), findsOneWidget);
+        }
 
-      // Default active method is the first one (Bisection Method)
-      expect(find.text('Active Method: Bisection Method'), findsOneWidget);
-    });
+        // Default active method is the first one (Bisection Method)
+        expect(find.text('Active Method: Bisection Method'), findsOneWidget);
+      },
+    );
 
-    testWidgets('renders compact dropdown selector on narrow screen (< 600px)', (
-      tester,
-    ) async {
-      solverFormBloc = SolverFormBloc(
-        executeSolverUseCase: mockExecuteSolverUseCase,
-      );
-      tester.view.physicalSize = const Size(400, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
+    testWidgets(
+      'renders compact dropdown selector on narrow screen (< 600px)',
+      (
+        tester,
+      ) async {
+        solverFormBloc = SolverFormBloc(
+          executeSolverUseCase: mockExecuteSolverUseCase,
+        );
+        tester.view.physicalSize = const Size(400, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
 
-      await tester.pumpWidget(
-        buildWorkspace(
-          categoryId: 'root-finding',
-          screenSize: const Size(400, 800),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          buildWorkspace(
+            categoryId: 'root-finding',
+            screenSize: const Size(400, 800),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('method_selector_compact')), findsOneWidget);
-      expect(find.byKey(const Key('method_selector_dropdown')), findsOneWidget);
-      expect(find.byKey(const Key('method_selector_wide')), findsNothing);
-    });
+        expect(
+          find.byKey(const Key('method_selector_compact')),
+          findsOneWidget,
+        );
+        expect(
+          find.byKey(const Key('method_selector_dropdown')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('method_selector_wide')), findsNothing);
+      },
+    );
 
-    testWidgets('selecting a different method in wide layout switches active method', (
-      tester,
-    ) async {
-      solverFormBloc = SolverFormBloc(
-        executeSolverUseCase: mockExecuteSolverUseCase,
-      );
-      tester.view.physicalSize = const Size(800, 900);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
+    testWidgets(
+      'selecting a different method in wide layout switches active method',
+      (
+        tester,
+      ) async {
+        solverFormBloc = SolverFormBloc(
+          executeSolverUseCase: mockExecuteSolverUseCase,
+        );
+        tester.view.physicalSize = const Size(800, 900);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
 
-      await tester.pumpWidget(
-        buildWorkspace(
-          categoryId: 'root-finding',
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          buildWorkspace(
+            categoryId: 'root-finding',
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Active Method: Bisection Method'), findsOneWidget);
+        expect(find.text('Active Method: Bisection Method'), findsOneWidget);
 
-      // Tap Newton-Raphson chip
-      final nrChip = find.byKey(const Key('method_chip_newton-raphson'));
-      await tester.ensureVisible(nrChip);
-      await tester.tap(nrChip);
-      await tester.pumpAndSettle();
+        // Tap Newton-Raphson chip
+        final nrChip = find.byKey(const Key('method_chip_newton-raphson'));
+        await tester.ensureVisible(nrChip);
+        await tester.tap(nrChip);
+        await tester.pumpAndSettle();
 
-      expect(find.text('Active Method: Newton-Raphson Method'), findsOneWidget);
-      expect(solverFormBloc.state.config?.id, equals('newton-raphson'));
-    });
+        expect(
+          find.text('Active Method: Newton-Raphson Method'),
+          findsOneWidget,
+        );
+        expect(solverFormBloc.state.config?.id, equals('newton-raphson'));
+      },
+    );
 
     testWidgets('unknown category displays error message and return button', (
       tester,
@@ -242,7 +272,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('workspace_error_message')), findsOneWidget);
-      expect(find.text('Unknown or empty category: "non-existent-category"'), findsOneWidget);
+      expect(
+        find.text('Unknown or empty category: "non-existent-category"'),
+        findsOneWidget,
+      );
       expect(find.byKey(const Key('workspace_go_home_button')), findsOneWidget);
     });
   });
@@ -311,34 +344,40 @@ void main() {
         String? capturedSolverId;
         Map<String, dynamic>? capturedPayload;
 
-        mockExecuteSolverUseCase.onCall = ({required solverId, required payload, accessToken}) {
-          capturedSolverId = solverId;
-          capturedPayload = payload;
-          return const Right(
-            SolverResult(
-              method: 'bisection',
-              status: 'converged',
-              finalAnswer: {'root': 1.521},
-              graphData: <Map<String, dynamic>>[
-                {'x': 1.0, 'y': -2.0},
-                {'x': 1.5, 'y': 0.0},
-                {'x': 2.0, 'y': 4.0},
-              ],
-            ),
-          );
-        };
+        mockExecuteSolverUseCase.onCall =
+            ({required solverId, required payload, accessToken}) {
+              capturedSolverId = solverId;
+              capturedPayload = payload;
+              return const Right(
+                SolverResult(
+                  method: 'bisection',
+                  status: 'converged',
+                  finalAnswer: {'root': 1.521},
+                  graphData: <Map<String, dynamic>>[
+                    {'x': 1.0, 'y': -2.0},
+                    {'x': 1.5, 'y': 0.0},
+                    {'x': 2.0, 'y': 4.0},
+                  ],
+                ),
+              );
+            };
 
         await tester.pumpWidget(buildFlowApp(initialLocation: AppRoutes.home));
         await tester.pumpAndSettle();
 
         // 1. Home screen shows Root Finding category
-        final rootCard = find.byKey(Key('category_card_${SolverCategory.rootFinding.id}'));
+        final rootCard = find.byKey(
+          Key('category_card_${SolverCategory.rootFinding.id}'),
+        );
         expect(rootCard, findsOneWidget);
         await tester.tap(rootCard);
         await tester.pumpAndSettle();
 
         // 2. Navigated to Workspace
-        expect(find.byKey(const Key('solver_workspace_screen')), findsOneWidget);
+        expect(
+          find.byKey(const Key('solver_workspace_screen')),
+          findsOneWidget,
+        );
         expect(find.text('Active Method: Bisection Method'), findsOneWidget);
 
         // Fill required fields
@@ -366,7 +405,10 @@ void main() {
         // 5. Result and Graph verified
         expect(find.byKey(const Key('solver_result_view')), findsOneWidget);
         expect(find.byKey(const Key('solver_chart_card')), findsOneWidget);
-        expect(find.byKey(const Key('curve_chart_repaint_boundary')), findsOneWidget);
+        expect(
+          find.byKey(const Key('curve_chart_repaint_boundary')),
+          findsOneWidget,
+        );
         expect(find.text('bisection Graph'), findsOneWidget);
       },
     );
@@ -379,19 +421,27 @@ void main() {
         );
         String? capturedSolverId;
 
-        mockExecuteSolverUseCase.onCall = ({required solverId, required payload, accessToken}) async {
-          capturedSolverId = solverId;
-          return const Right(
-            SolverResult(
-              method: 'gauss-elimination',
-              status: 'converged',
-              finalAnswer: {'solution': [1.0, 2.0]},
-            ),
-          );
-        };
+        mockExecuteSolverUseCase.onCall =
+            ({required solverId, required payload, accessToken}) async {
+              capturedSolverId = solverId;
+              return const Right(
+                SolverResult(
+                  method: 'gauss-elimination',
+                  status: 'converged',
+                  finalAnswer: {
+                    'solution': [1.0, 2.0],
+                  },
+                ),
+              );
+            };
 
         await tester.pumpWidget(
-          buildFlowApp(initialLocation: AppRoutes.workspace('linear-algebra', 'gauss-elimination')),
+          buildFlowApp(
+            initialLocation: AppRoutes.workspace(
+              'linear-algebra',
+              'gauss-elimination',
+            ),
+          ),
         );
         await tester.pumpAndSettle();
 
@@ -428,31 +478,34 @@ void main() {
         );
         String? capturedSolverId;
 
-        mockExecuteSolverUseCase.onCall = ({required solverId, required payload, accessToken}) async {
-          capturedSolverId = solverId;
-          return const Right(
-            SolverResult(
-              method: 'lagrange',
-              status: 'converged',
-              finalAnswer: {'predictedY': 4.5},
-              graphData: <String, dynamic>{
-                'originalPoints': <Map<String, dynamic>>[
-                  {'x': 1, 'y': 2},
-                  {'x': 3, 'y': 8},
-                ],
-                'sampledCurve': <Map<String, dynamic>>[
-                  {'x': 1, 'y': 2},
-                  {'x': 2, 'y': 4.5},
-                  {'x': 3, 'y': 8},
-                ],
-                'predictedPoint': {'x': 2, 'y': 4.5},
-              },
-            ),
-          );
-        };
+        mockExecuteSolverUseCase.onCall =
+            ({required solverId, required payload, accessToken}) async {
+              capturedSolverId = solverId;
+              return const Right(
+                SolverResult(
+                  method: 'lagrange',
+                  status: 'converged',
+                  finalAnswer: {'predictedY': 4.5},
+                  graphData: <String, dynamic>{
+                    'originalPoints': <Map<String, dynamic>>[
+                      {'x': 1, 'y': 2},
+                      {'x': 3, 'y': 8},
+                    ],
+                    'sampledCurve': <Map<String, dynamic>>[
+                      {'x': 1, 'y': 2},
+                      {'x': 2, 'y': 4.5},
+                      {'x': 3, 'y': 8},
+                    ],
+                    'predictedPoint': {'x': 2, 'y': 4.5},
+                  },
+                ),
+              );
+            };
 
         await tester.pumpWidget(
-          buildFlowApp(initialLocation: AppRoutes.workspace('interpolation', 'lagrange')),
+          buildFlowApp(
+            initialLocation: AppRoutes.workspace('interpolation', 'lagrange'),
+          ),
         );
         await tester.pumpAndSettle();
 
@@ -477,7 +530,10 @@ void main() {
         expect(capturedSolverId, equals('lagrange'));
         expect(find.byKey(const Key('solver_result_view')), findsOneWidget);
         expect(find.byKey(const Key('solver_chart_card')), findsOneWidget);
-        expect(find.byKey(const Key('interpolation_chart_repaint_boundary')), findsOneWidget);
+        expect(
+          find.byKey(const Key('interpolation_chart_repaint_boundary')),
+          findsOneWidget,
+        );
       },
     );
 
@@ -489,21 +545,22 @@ void main() {
         );
         String? capturedSolverId;
 
-        mockExecuteSolverUseCase.onCall = ({required solverId, required payload, accessToken}) async {
-          capturedSolverId = solverId;
-          return const Right(
-            SolverResult(
-              method: 'euler',
-              status: 'converged',
-              finalAnswer: {'y_end': 2.488},
-              graphData: <Map<String, dynamic>>[
-                {'x': 0.0, 'y': 1.0},
-                {'x': 0.5, 'y': 1.5},
-                {'x': 1.0, 'y': 2.488},
-              ],
-            ),
-          );
-        };
+        mockExecuteSolverUseCase.onCall =
+            ({required solverId, required payload, accessToken}) async {
+              capturedSolverId = solverId;
+              return const Right(
+                SolverResult(
+                  method: 'euler',
+                  status: 'converged',
+                  finalAnswer: {'y_end': 2.488},
+                  graphData: <Map<String, dynamic>>[
+                    {'x': 0.0, 'y': 1.0},
+                    {'x': 0.5, 'y': 1.5},
+                    {'x': 1.0, 'y': 2.488},
+                  ],
+                ),
+              );
+            };
 
         await tester.pumpWidget(
           buildFlowApp(initialLocation: AppRoutes.workspace('ode', 'euler')),
@@ -530,7 +587,10 @@ void main() {
 
         expect(capturedSolverId, equals('euler'));
         expect(find.byKey(const Key('solver_result_view')), findsOneWidget);
-        expect(find.byKey(const Key('curve_chart_repaint_boundary')), findsOneWidget);
+        expect(
+          find.byKey(const Key('curve_chart_repaint_boundary')),
+          findsOneWidget,
+        );
       },
     );
 
@@ -542,19 +602,22 @@ void main() {
         );
         String? capturedSolverId;
 
-        mockExecuteSolverUseCase.onCall = ({required solverId, required payload, accessToken}) async {
-          capturedSolverId = solverId;
-          return const Right(
-            SolverResult(
-              method: 'trapezoidal',
-              status: 'converged',
-              finalAnswer: {'integral': 0.335},
-            ),
-          );
-        };
+        mockExecuteSolverUseCase.onCall =
+            ({required solverId, required payload, accessToken}) async {
+              capturedSolverId = solverId;
+              return const Right(
+                SolverResult(
+                  method: 'trapezoidal',
+                  status: 'converged',
+                  finalAnswer: {'integral': 0.335},
+                ),
+              );
+            };
 
         await tester.pumpWidget(
-          buildFlowApp(initialLocation: AppRoutes.workspace('integration', 'trapezoidal')),
+          buildFlowApp(
+            initialLocation: AppRoutes.workspace('integration', 'trapezoidal'),
+          ),
         );
         await tester.pumpAndSettle();
 
@@ -588,31 +651,37 @@ void main() {
         );
         String? capturedSolverId;
 
-        mockExecuteSolverUseCase.onCall = ({required solverId, required payload, accessToken}) async {
-          capturedSolverId = solverId;
-          return const Right(
-            SolverResult(
-              method: 'function-finite-difference',
-              status: 'converged',
-              finalAnswer: {'derivative': 4.001},
-              graphData: <String, dynamic>{
-                'originalPoints': <Map<String, dynamic>>[
-                  {'x': 1.0, 'y': 1.0},
-                  {'x': 2.0, 'y': 4.0},
-                ],
-                'stencilPoints': <Map<String, dynamic>>[
-                  {'x': 1.0, 'y': 1.0},
-                  {'x': 2.0, 'y': 4.0},
-                ],
-                'derivativePoint': {'x': 2.0, 'y': 4.0},
-                'targetX': 2.0,
-              },
-            ),
-          );
-        };
+        mockExecuteSolverUseCase.onCall =
+            ({required solverId, required payload, accessToken}) async {
+              capturedSolverId = solverId;
+              return const Right(
+                SolverResult(
+                  method: 'function-finite-difference',
+                  status: 'converged',
+                  finalAnswer: {'derivative': 4.001},
+                  graphData: <String, dynamic>{
+                    'originalPoints': <Map<String, dynamic>>[
+                      {'x': 1.0, 'y': 1.0},
+                      {'x': 2.0, 'y': 4.0},
+                    ],
+                    'stencilPoints': <Map<String, dynamic>>[
+                      {'x': 1.0, 'y': 1.0},
+                      {'x': 2.0, 'y': 4.0},
+                    ],
+                    'derivativePoint': {'x': 2.0, 'y': 4.0},
+                    'targetX': 2.0,
+                  },
+                ),
+              );
+            };
 
         await tester.pumpWidget(
-          buildFlowApp(initialLocation: AppRoutes.workspace('differentiation', 'function-finite-difference')),
+          buildFlowApp(
+            initialLocation: AppRoutes.workspace(
+              'differentiation',
+              'function-finite-difference',
+            ),
+          ),
         );
         await tester.pumpAndSettle();
 
@@ -635,22 +704,33 @@ void main() {
 
         expect(capturedSolverId, equals('function-finite-difference'));
         expect(find.byKey(const Key('solver_result_view')), findsOneWidget);
-        expect(find.byKey(const Key('differentiation_chart_repaint_boundary')), findsOneWidget);
+        expect(
+          find.byKey(const Key('differentiation_chart_repaint_boundary')),
+          findsOneWidget,
+        );
       },
     );
 
-    testWidgets('legacy direct solver route /solver/:solverId redirects to category workspace', (
-      tester,
-    ) async {
-      solverFormBloc = SolverFormBloc(
-        executeSolverUseCase: mockExecuteSolverUseCase,
-      );
-      await tester.pumpWidget(buildFlowApp(initialLocation: AppRoutes.solver('bisection')));
-      await tester.pumpAndSettle();
+    testWidgets(
+      'legacy direct solver route /solver/:solverId redirects to category workspace',
+      (
+        tester,
+      ) async {
+        solverFormBloc = SolverFormBloc(
+          executeSolverUseCase: mockExecuteSolverUseCase,
+        );
+        await tester.pumpWidget(
+          buildFlowApp(initialLocation: AppRoutes.solver('bisection')),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('solver_workspace_screen')), findsOneWidget);
-      expect(find.text('Active Method: Bisection Method'), findsOneWidget);
-    });
+        expect(
+          find.byKey(const Key('solver_workspace_screen')),
+          findsOneWidget,
+        );
+        expect(find.text('Active Method: Bisection Method'), findsOneWidget);
+      },
+    );
   });
 
   group('4. Parameterized Verification for All 27 Registry Methods', () {
@@ -736,58 +816,69 @@ void main() {
       return fixture;
     }
 
-    test('all 27 methods can be initialized with schema fixtures and submitted cleanly', () async {
-      for (final config in SolverMethodRegistry.all) {
-        final mockUseCase = MockExecuteSolverUseCase();
-        String? capturedSolverId;
-        Map<String, dynamic>? capturedPayload;
+    test(
+      'all 27 methods can be initialized with schema fixtures and submitted cleanly',
+      () async {
+        for (final config in SolverMethodRegistry.all) {
+          final mockUseCase = MockExecuteSolverUseCase();
+          String? capturedSolverId;
+          Map<String, dynamic>? capturedPayload;
 
-        mockUseCase.onCall = ({required solverId, required payload, accessToken}) async {
-          capturedSolverId = solverId;
-          capturedPayload = payload;
-          return Right(
-            SolverResult(
-              method: solverId,
-              finalAnswer: const {'status': 'ok'},
-            ),
+          mockUseCase.onCall =
+              ({required solverId, required payload, accessToken}) async {
+                capturedSolverId = solverId;
+                capturedPayload = payload;
+                return Right(
+                  SolverResult(
+                    method: solverId,
+                    finalAnswer: const {'status': 'ok'},
+                  ),
+                );
+              };
+
+          final bloc = SolverFormBloc(executeSolverUseCase: mockUseCase)
+            ..add(SolverFormLoadStarted(solverId: config.id));
+          await bloc.stream.firstWhere(
+            (s) => s.isReady && s.config?.id == config.id,
           );
-        };
 
-        final bloc = SolverFormBloc(executeSolverUseCase: mockUseCase)
-          ..add(SolverFormLoadStarted(solverId: config.id));
-        await bloc.stream.firstWhere((s) => s.isReady && s.config?.id == config.id);
-
-        final fixture = generateFixture(config);
-        final errors = config.validate(fixture);
-        expect(
-          errors,
-          isEmpty,
-          reason: 'Fixture for ${config.id} must be valid but had errors: $errors',
-        );
-
-        bloc.add(SolverFormFieldsBulkChanged(fixture));
-        await bloc.stream.firstWhere((s) => s.isReady && s.fieldErrors.isEmpty);
-
-        // Submit form
-        bloc.add(const SolverFormSubmitted());
-        final submittedState = await bloc.stream.firstWhere((s) => s.isSuccess);
-
-        expect(submittedState.isSuccess, isTrue);
-        expect(capturedSolverId, equals(config.id));
-        expect(capturedPayload, isNotNull);
-
-        // Verify payload only contains fields declared in the schema
-        final allowedNames = config.fields.map((f) => f.name).toSet();
-        for (final key in capturedPayload!.keys) {
+          final fixture = generateFixture(config);
+          final errors = config.validate(fixture);
           expect(
-            allowedNames.contains(key),
-            isTrue,
-            reason: 'Payload key "$key" must belong to ${config.id} schema',
+            errors,
+            isEmpty,
+            reason:
+                'Fixture for ${config.id} must be valid but had errors: $errors',
           );
-        }
 
-        await bloc.close();
-      }
-    });
+          bloc.add(SolverFormFieldsBulkChanged(fixture));
+          await bloc.stream.firstWhere(
+            (s) => s.isReady && s.fieldErrors.isEmpty,
+          );
+
+          // Submit form
+          bloc.add(const SolverFormSubmitted());
+          final submittedState = await bloc.stream.firstWhere(
+            (s) => s.isSuccess,
+          );
+
+          expect(submittedState.isSuccess, isTrue);
+          expect(capturedSolverId, equals(config.id));
+          expect(capturedPayload, isNotNull);
+
+          // Verify payload only contains fields declared in the schema
+          final allowedNames = config.fields.map((f) => f.name).toSet();
+          for (final key in capturedPayload!.keys) {
+            expect(
+              allowedNames.contains(key),
+              isTrue,
+              reason: 'Payload key "$key" must belong to ${config.id} schema',
+            );
+          }
+
+          await bloc.close();
+        }
+      },
+    );
   });
 }
