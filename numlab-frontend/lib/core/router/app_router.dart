@@ -7,6 +7,7 @@ import 'package:numlab_frontend/features/auth/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/auth/presentation/screens/screens.dart';
 import 'package:numlab_frontend/features/history/presentation/pages/pages.dart';
 import 'package:numlab_frontend/features/profile/presentation/profile_screen.dart';
+import 'package:numlab_frontend/features/reports/presentation/pages/report_preview_page.dart';
 import 'package:numlab_frontend/features/solvers/domain/models/models.dart';
 import 'package:numlab_frontend/features/solvers/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/solvers/presentation/screens/screens.dart';
@@ -25,6 +26,7 @@ abstract final class AppRoutes {
   /// Builds a history detail path for the specified [runId].
   static String historyDetail(String runId) => '$history/$runId';
 
+  static String reportPreview(String runId) => '${historyDetail(runId)}/report';
 
   /// Builds a solver path for the specified [id].
   static String solver(String id) => '$solverPrefix/$id';
@@ -165,6 +167,21 @@ class AppRouter {
                 final runId = state.pathParameters['runId'] ?? '';
                 return HistoryDetailPage(runId: runId);
               },
+              routes: [
+                GoRoute(
+                  path: 'report',
+                  name: 'reportPreview',
+                  builder: (context, state) => BlocProvider.value(
+                    value: _authBloc,
+                    child: ReportPreviewPage(
+                      runId: state.pathParameters['runId'] ?? '',
+                      session: state.extra is ReportPreviewSession
+                          ? state.extra! as ReportPreviewSession
+                          : null,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

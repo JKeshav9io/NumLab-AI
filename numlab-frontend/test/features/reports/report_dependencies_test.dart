@@ -10,6 +10,7 @@ import 'package:numlab_frontend/features/reports/domain/usecases/usecases.dart';
 import 'package:numlab_frontend/features/reports/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/reports/presentation/bloc/report_delivery_bloc.dart';
 import 'package:numlab_frontend/features/reports/presentation/services/report_delivery.dart';
+import 'package:numlab_frontend/features/reports/presentation/services/report_preview_renderer.dart';
 import 'package:numlab_frontend/injection_container.dart';
 
 import 'report_test_support.dart';
@@ -44,7 +45,10 @@ void main() {
     expect(sl<ReportRepository>(), same(sl<ReportRepository>()));
   });
 
-
+  test('registers the platform preview adapter without opening any PDF', () {
+    expect(sl<ReportPreviewRenderer>(), isA<PdfrxReportPreviewRenderer>());
+    expect(sl<ReportPreviewRenderer>(), same(sl<ReportPreviewRenderer>()));
+  });
 
 
 

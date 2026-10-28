@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:numlab_frontend/core/error/failures.dart';
+import 'package:numlab_frontend/core/router/app_router.dart';
 import 'package:numlab_frontend/core/theme/app_spacing.dart';
 import 'package:numlab_frontend/features/auth/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/history/domain/entities/history_run.dart';
 import 'package:numlab_frontend/features/reports/domain/entities/pdf_report.dart';
 import 'package:numlab_frontend/features/reports/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/reports/presentation/bloc/report_delivery_bloc.dart';
+import 'package:numlab_frontend/features/reports/presentation/pages/report_preview_page.dart';
 import 'package:numlab_frontend/features/reports/presentation/services/report_delivery.dart';
 import 'package:numlab_frontend/injection_container.dart';
 
@@ -145,6 +150,32 @@ class _ReportActionsView extends StatelessWidget {
                   ),
                 ] else ...[
                   const Text('PDF ready.', key: Key('report_ready')),
+                  const SizedBox(height: AppSpacing.sm),
+                  OutlinedButton.icon(
+                    key: const Key('report_preview_button'),
+                    onPressed: () {
+                      if (!_isCurrentReport(
+                        context,
+                        runId: runId,
+                        ownerId: ownerId,
+                        report: report,
+                      )) {
+                        return;
+                      }
+                      unawaited(
+                        context.push<void>(
+                          AppRoutes.reportPreview(runId),
+                          extra: ReportPreviewSession(
+                            runId: runId,
+                            ownerId: ownerId,
+                            bloc: context.read<ReportBloc>(),
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.preview_outlined),
+                    label: const Text('Preview PDF'),
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                   BlocBuilder<ReportDeliveryBloc, ReportDeliveryState>(
                     builder: (context, delivery) {
