@@ -10,6 +10,10 @@ import 'package:numlab_frontend/features/auth/data/repositories/auth_repository_
 import 'package:numlab_frontend/features/auth/domain/repositories/auth_repository.dart';
 import 'package:numlab_frontend/features/auth/domain/usecases/usecases.dart';
 import 'package:numlab_frontend/features/auth/presentation/bloc/bloc.dart';
+import 'package:numlab_frontend/features/history/data/datasources/datasources.dart';
+import 'package:numlab_frontend/features/history/data/repositories/repositories.dart';
+import 'package:numlab_frontend/features/history/domain/repositories/repositories.dart';
+import 'package:numlab_frontend/features/history/domain/usecases/usecases.dart';
 import 'package:numlab_frontend/features/solvers/data/datasources/solver_remote_data_source.dart';
 import 'package:numlab_frontend/features/solvers/data/repositories/solver_repository_impl.dart';
 import 'package:numlab_frontend/features/solvers/domain/repositories/solver_repository.dart';
@@ -111,5 +115,34 @@ Future<void> initDependencies() async {
       () => SolverFormBloc(
         executeSolverUseCase: sl<ExecuteSolverUseCase>(),
       ),
-    );
+    )
+    // 7. History Feature (Data & Domain)
+    ..registerLazySingleton<HistoryRemoteDataSource>(
+      () => HistoryRemoteDataSourceImpl(dio: sl<Dio>()),
+    )
+    ..registerLazySingleton<HistoryRepository>(
+      () => HistoryRepositoryImpl(
+        remoteDataSource: sl<HistoryRemoteDataSource>(),
+      ),
+    )
+    ..registerLazySingleton<GetHistoryRunsUseCase>(
+      () => GetHistoryRunsUseCase(sl<HistoryRepository>()),
+    )
+    ..registerLazySingleton<GetHistoryRunByIdUseCase>(
+      () => GetHistoryRunByIdUseCase(sl<HistoryRepository>()),
+    )
+
+    // 8. Explanations Feature (Data, Domain & Presentation)
+
+
+
+
+
+
+
+
+
+
+
+;
 }
