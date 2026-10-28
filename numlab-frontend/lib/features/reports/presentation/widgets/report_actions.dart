@@ -13,6 +13,7 @@ import 'package:numlab_frontend/features/reports/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/reports/presentation/bloc/report_delivery_bloc.dart';
 import 'package:numlab_frontend/features/reports/presentation/pages/report_preview_page.dart';
 import 'package:numlab_frontend/features/reports/presentation/services/report_delivery.dart';
+import 'package:numlab_frontend/features/reports/presentation/services/report_sharing.dart';
 import 'package:numlab_frontend/injection_container.dart';
 
 bool _isCurrentReport(
@@ -181,7 +182,8 @@ class _ReportActionsView extends StatelessWidget {
                     builder: (context, delivery) {
                       final matching = identical(delivery.report, report);
                       final saving = delivery is ReportSaving;
-                      final busy = saving;
+                      final busy =
+                          saving || delivery is ReportSharingInProgress;
                       final message = !matching
                           ? null
                           : switch (delivery) {
@@ -200,6 +202,18 @@ class _ReportActionsView extends StatelessWidget {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          if (context
+                              .read<ReportDeliveryBloc>()
+                              .supportsSharing) ...[
+                            _ReportShareAction(
+                              runId: runId,
+                              ownerId: ownerId,
+                              report: report,
+                              state: delivery,
+                              busy: busy,
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                          ],
                           ElevatedButton.icon(
                             key: const Key('report_save_button'),
                             onPressed: busy
@@ -240,6 +254,97 @@ class _ReportActionsView extends StatelessWidget {
           },
         ),
       ),
+    );
+  }
+}
+
+class _ReportShareAction extends StatelessWidget {
+  const _ReportShareAction({
+    required this.runId,
+    required this.ownerId,
+    required this.report,
+    required this.state,
+    required this.busy,
+  });
+
+  final String runId;
+  final String ownerId;
+  final PdfReport report;
+  final ReportDeliveryState state;
+  final bool busy;
+
+  void _share(BuildContext context) {
+    if (!_isCurrentReport(
+      context,
+      runId: runId,
+      ownerId: ownerId,
+      report: report,
+    )) {
+      return;
+    }
+    final box = context.findRenderObject();
+    if (box is! RenderBox || !box.hasSize) return;
+    context.read<ReportDeliveryBloc>().add(
+      ReportShareRequested(
+        report,
+        origin: box.localToGlobal(Offset.zero) & box.size,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final matching = identical(state.report, report);
+    final sharing = matching && state is ReportSharingInProgress;
+    final message = !matching
+        ? null
+        : switch (state) {
+            ReportShareFailure() =>
+              (state as ReportShareFailure).failure.message,
+            ReportShareFinished(:final outcome) => switch (outcome) {
+              ReportShareOutcome.targetSelected =>
+                'Sharing target selected. Completion is not confirmed.',
+              ReportShareOutcome.cancelled =>
+                'Share cancelled. The PDF is still ready.',
+              ReportShareOutcome.unconfirmed =>
+                'Sharing returned no confirmed result. Check the sharing app.',
+              ReportShareOutcome.unsupported =>
+                'PDF sharing is unavailable on this platform or browser. Use Save PDF.',
+              ReportShareOutcome.busy =>
+                'Another share is still open. Finish it before trying again.',
+            },
+            _ => null,
+          };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Builder(
+          builder: (buttonContext) => OutlinedButton.icon(
+            key: const Key('report_share_button'),
+            onPressed: busy || report.bytes.isEmpty
+                ? null
+                : () => _share(buttonContext),
+            icon: sharing
+                ? const SizedBox.square(
+                    dimension: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.share_outlined),
+            label: Text(sharing ? 'Opening sharing…' : 'Share PDF'),
+          ),
+        ),
+        if (message != null || report.bytes.isEmpty) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              message ??
+                  'PDF data is unavailable. Return to Calculation Detail.',
+              key: const Key('report_share_message'),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

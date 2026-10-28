@@ -11,6 +11,7 @@ import 'package:numlab_frontend/features/reports/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/reports/presentation/bloc/report_delivery_bloc.dart';
 import 'package:numlab_frontend/features/reports/presentation/services/report_delivery.dart';
 import 'package:numlab_frontend/features/reports/presentation/services/report_preview_renderer.dart';
+import 'package:numlab_frontend/features/reports/presentation/services/report_sharing.dart';
 import 'package:numlab_frontend/injection_container.dart';
 
 import 'report_test_support.dart';
@@ -50,7 +51,20 @@ void main() {
     expect(sl<ReportPreviewRenderer>(), same(sl<ReportPreviewRenderer>()));
   });
 
-
+  test(
+    'registers one sharing adapter and injects it into delivery factories',
+    () async {
+      expect(sl<ReportSharing>(), isA<SharePlusReportSharing>());
+      expect(sl<ReportSharing>(), same(sl<ReportSharing>()));
+      final first = sl<ReportDeliveryBloc>();
+      final second = sl<ReportDeliveryBloc>();
+      expect(first, isNot(same(second)));
+      expect(first.supportsSharing, isTrue);
+      expect(second.supportsSharing, isTrue);
+      await first.close();
+      await second.close();
+    },
+  );
 
   test('registers one delivery adapter and isolated delivery BLoCs', () async {
     expect(sl<ReportDelivery>(), isA<FilePickerReportDelivery>());

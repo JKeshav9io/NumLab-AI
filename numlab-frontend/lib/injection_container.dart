@@ -28,6 +28,7 @@ import 'package:numlab_frontend/features/reports/presentation/bloc/bloc.dart';
 import 'package:numlab_frontend/features/reports/presentation/bloc/report_delivery_bloc.dart';
 import 'package:numlab_frontend/features/reports/presentation/services/report_delivery.dart';
 import 'package:numlab_frontend/features/reports/presentation/services/report_preview_renderer.dart';
+import 'package:numlab_frontend/features/reports/presentation/services/report_sharing.dart';
 import 'package:numlab_frontend/features/solvers/data/datasources/solver_remote_data_source.dart';
 import 'package:numlab_frontend/features/solvers/data/repositories/solver_repository_impl.dart';
 import 'package:numlab_frontend/features/solvers/domain/repositories/solver_repository.dart';
@@ -190,10 +191,13 @@ Future<void> initDependencies() async {
     ..registerLazySingleton<ReportPreviewRenderer>(
       () => const PdfrxReportPreviewRenderer(),
     )
-
+    ..registerLazySingleton<ReportSharing>(
+      SharePlusReportSharing.new,
+    )
     ..registerFactory<ReportDeliveryBloc>(
       () => ReportDeliveryBloc(
         delivery: sl<ReportDelivery>(),
+        sharing: sl<ReportSharing>(),
       ),
     );
 }
