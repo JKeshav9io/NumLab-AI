@@ -182,7 +182,7 @@ describe('Solver Run Persistence & History API', () => {
     expect(body.data.pagination.offset).toBe(0);
 
     body.data.runs.forEach((run) => {
-      expect(run.userId).toBe(userA.id);
+      expect(Object.keys(run).sort()).toEqual(['createdAt', 'id', 'method', 'summaryPayload']);
     });
 
     // Ensure user B's run is NOT in user A's history

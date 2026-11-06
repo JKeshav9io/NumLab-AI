@@ -26,7 +26,7 @@ async function getMe(req, res) {
  */
 async function getHistory(req, res) {
   const { limit, offset } = validateHistoryQuery(req.query);
-  const { runs, total } = await solverRunRepository.findByUserId(req.user.id, { limit, offset });
+  const { runs, total } = await solverRunRepository.findByUserId(req.user.id, { limit, offset, requestId: req.id });
 
   return sendSuccess(
     res,

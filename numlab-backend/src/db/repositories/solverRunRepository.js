@@ -21,6 +21,11 @@ async function create(data) {
         method: data.method,
         inputPayload: data.inputPayload,
         outputPayload: data.outputPayload,
+        summaryPayload: {
+          method: data.outputPayload.method ?? data.method,
+          status: data.outputPayload.status ?? null,
+          equation: String(data.inputPayload.equation ?? '').slice(0, 120),
+        },
       },
     });
 
@@ -43,18 +48,20 @@ async function create(data) {
  * @param {number} [options.offset=0]
  * @returns {Promise<{ runs: Array<Object>, total: number }>}
  */
-async function findByUserId(userId, { limit = 20, offset = 0 } = {}) {
+async function findByUserId(userId, { limit = 20, offset = 0, requestId } = {}) {
   try {
+    const started = Date.now();
     const [runs, total] = await Promise.all([
       prisma.solverRun.findMany({
         where: { userId },
-        orderBy: { createdAt: 'desc' },
+        select: { id: true, method: true, summaryPayload: true, createdAt: true },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: Math.min(Math.max(1, limit), 100),
         skip: Math.max(0, offset),
-      }),
+      }).finally(() => logger.info({ requestId, operation: 'history.list', elapsedMs: Date.now() - started }, 'DB timing')),
       prisma.solverRun.count({
         where: { userId },
-      }),
+      }).finally(() => logger.info({ requestId, operation: 'history.count', elapsedMs: Date.now() - started }, 'DB timing')),
     ]);
 
     return { runs, total };

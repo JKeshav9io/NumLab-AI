@@ -5,6 +5,29 @@ const userRepository = require('../db/repositories/userRepository');
 const solverRunRepository = require('../db/repositories/solverRunRepository');
 const aiExplanationRepository = require('../db/repositories/aiExplanationRepository');
 
+describe('Phase 3 query contracts', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  test('history persists a bounded summary and lists no full payloads', async () => {
+    const insert = jest.spyOn(prisma.solverRun, 'create').mockResolvedValue({ id: 'run' });
+    const list = jest.spyOn(prisma.solverRun, 'findMany').mockResolvedValue([]);
+    jest.spyOn(prisma.solverRun, 'count').mockResolvedValue(0);
+    await solverRunRepository.create({
+      method: 'root/bisection', inputPayload: { equation: 'x'.repeat(500) },
+      outputPayload: { method: 'Bisection', status: 'converged', graphData: [1, 2, 3] },
+    });
+    expect(insert.mock.calls[0][0].data.summaryPayload).toEqual({
+      method: 'Bisection', status: 'converged', equation: 'x'.repeat(120),
+    });
+    await solverRunRepository.findByUserId('user');
+    expect(list.mock.calls[0][0].select).toEqual({
+      id: true, method: true, summaryPayload: true, createdAt: true,
+    });
+  });
+
+
+});
+
 describe('Database & Repository Layer Integration', () => {
   const testEmail = `test_${Date.now()}@example.com`;
   let testUserId = null;
@@ -30,8 +53,6 @@ describe('Database & Repository Layer Integration', () => {
           where: { id: testUserId },
         });
       }
-    } catch (_err) {
-      // Ignore cleanup error if already removed
     } finally {
       await prisma.$disconnect();
     }
@@ -117,5 +138,22 @@ describe('Database & Repository Layer Integration', () => {
     expect(cached).toBeDefined();
     expect(cached.id).toBe(explanation.id);
     expect(cached.responseText).toBe(explanation.responseText);
+  });
+
+  test('history pages break identical creation timestamps by descending run ID', async () => {
+    const ids = [require('crypto').randomUUID(), require('crypto').randomUUID()].sort();
+    try {
+      for (const id of ids) {
+        await prisma.solverRun.create({ data: {
+          id, userId: testUserId, method: 'root/bisection',
+          inputPayload: {}, outputPayload: {}, createdAt: new Date('2100-01-01'),
+        } });
+      }
+      const first = await solverRunRepository.findByUserId(testUserId, { limit: 1 });
+      const next = await solverRunRepository.findByUserId(testUserId, { limit: 1, offset: 1 });
+      expect([first.runs[0].id, next.runs[0].id]).toEqual([...ids].reverse());
+    } finally {
+      await prisma.solverRun.deleteMany({ where: { id: { in: ids } } });
+    }
   });
 });
