@@ -42,17 +42,18 @@ class HistoryListItem extends StatelessWidget {
         .join(' ');
   }
 
-  /// Resolves human-readable execution status.
+  String? get _status =>
+      (run.summaryPayload['status'] ?? run.outputPayload['status'])
+          ?.toString()
+          .trim()
+          .toLowerCase();
+
+  /// Resolves human-readable execution status without assuming success.
   String get _statusText {
-    final status = run.outputPayload['status']?.toString();
-    if (status != null && status.isNotEmpty) {
-      return status.replaceAll('_', ' ').toUpperCase();
-    }
-    final finalAnswer = run.outputPayload['finalAnswer'];
-    if (finalAnswer is Map && finalAnswer['converged'] == true) {
-      return 'CONVERGED';
-    }
-    return 'COMPLETED';
+    final status = _status;
+    return status == null || status.isEmpty
+        ? 'UNKNOWN'
+        : status.replaceAll('_', ' ').toUpperCase();
   }
 
   /// Formats creation date/time in YYYY-MM-DD HH:mm.
@@ -66,16 +67,13 @@ class HistoryListItem extends StatelessWidget {
     return '$y-$m-$d $hh:$mm';
   }
 
-  Color get _statusColor {
-    final st = _statusText;
-    if (st.contains('CONVERG') || st.contains('SUCCESS') || st == 'COMPLETED') {
-      return AppColors.success;
-    }
-    if (st.contains('FAIL') || st.contains('ERROR') || st.contains('DIVERG')) {
-      return AppColors.error;
-    }
-    return AppColors.warning;
-  }
+  Color _statusColor(BuildContext context) => switch (_status) {
+    'completed' => AppColors.success,
+    'failed' || 'error' || 'diverged' => AppColors.error,
+    'not_converged' || 'non_convergent' || 'max_iterations_reached' =>
+      AppColors.warning,
+    _ => Theme.of(context).colorScheme.onSurfaceVariant,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -136,7 +134,7 @@ class HistoryListItem extends StatelessWidget {
                           key: Key('history_item_status_${run.id}'),
                           style: AppTypography.codeMono.copyWith(
                             fontSize: 11,
-                            color: _statusColor,
+                            color: _statusColor(context),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
