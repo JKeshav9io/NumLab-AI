@@ -142,7 +142,7 @@ function runRootSolver(method, solver, params, context) {
   return runSolver(method, solver, params, context);
 }
 
-function runSolver(method, solver, params, context = {}) {
+async function runSolver(method, solver, params, context = {}) {
   const result = solver(params);
 
   logger.info({
@@ -155,27 +155,14 @@ function runSolver(method, solver, params, context = {}) {
     warningCount: Array.isArray(result.warnings) ? result.warnings.length : 0,
   }, 'Solve completed');
 
-  // Asynchronous non-blocking persistence (Phase 1 & Phase 3 pattern)
-  solverRunRepository
-    .create({
-      userId: context.userId || null,
-      method,
-      inputPayload: params,
-      outputPayload: result,
-    })
-    .catch((err) => {
-      logger.warn(
-        {
-          err: err.message,
-          method,
-          userId: context.userId || null,
-          requestId: context.requestId,
-        },
-        'Non-fatal warning: Failed to persist solver run to database'
-      );
-    });
+  const run = await solverRunRepository.create({
+    userId: context.userId || null,
+    method,
+    inputPayload: params,
+    outputPayload: result,
+  });
 
-  return result;
+  return context.userId ? { ...result, runId: run.id, createdAt: run.createdAt } : result;
 }
 
 module.exports = {

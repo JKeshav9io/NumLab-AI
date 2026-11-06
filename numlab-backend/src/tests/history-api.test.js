@@ -60,8 +60,6 @@ describe('Solver Run Persistence & History API', () => {
         await prisma.solverRun.deleteMany({ where: { userId: userB.id } });
         await prisma.user.deleteMany({ where: { id: userB.id } });
       }
-    } catch (_err) {
-      // Ignore cleanup error
     } finally {
       await prisma.$disconnect();
       await new Promise((resolve) => server.close(resolve));
@@ -121,9 +119,8 @@ describe('Solver Run Persistence & History API', () => {
     expect(res.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.data.finalAnswer.root).toBeCloseTo(3, 2);
-
-    // Give asynchronous persistence a moment
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(body.data.runId).toBeDefined();
+    expect(body.data.createdAt).toBeDefined();
 
     const userRuns = await prisma.solverRun.findMany({
       where: { userId: userA.id },
@@ -132,6 +129,7 @@ describe('Solver Run Persistence & History API', () => {
 
     expect(userRuns.length).toBeGreaterThanOrEqual(1);
     expect(userRuns[0].userId).toBe(userA.id);
+    expect(userRuns[0].id).toBe(body.data.runId);
     expect(userRuns[0].inputPayload.equation).toBe('x^2 - 9');
     userARunId = userRuns[0].id;
   });
@@ -183,7 +181,6 @@ describe('Solver Run Persistence & History API', () => {
     expect(body.data.pagination.limit).toBe(10);
     expect(body.data.pagination.offset).toBe(0);
 
-    // Verify all returned runs belong strictly to userA
     body.data.runs.forEach((run) => {
       expect(run.userId).toBe(userA.id);
     });
@@ -239,9 +236,10 @@ describe('Solver Run Persistence & History API', () => {
     expect(bodyDetail.error.code).toBe('UNAUTHORIZED');
   });
 
-  test('Non-blocking DB write failure does not fail the user-facing solver response', async () => {
+  test('Authenticated solve returns a persistence failure instead of success', async () => {
+    const { AppError, errorCodes } = require('../common/errors');
     const spy = jest.spyOn(solverRunRepository, 'create').mockRejectedValueOnce(
-      new Error('Simulated Database Outage')
+      new AppError('Failed to persist solver run', 500, errorCodes.DATABASE_ERROR)
     );
 
     const res = await fetch(`${baseUrl}/api/v1/solve/root/bisection`, {
@@ -259,13 +257,48 @@ describe('Solver Run Persistence & History API', () => {
     });
     const body = await res.json();
 
-    // The user MUST still receive 200 OK with correct math results
-    expect(res.status).toBe(200);
-    expect(body.success).toBe(true);
-    expect(body.data.status).toBe('converged');
-    expect(body.data.finalAnswer.root).toBeCloseTo(2, 2);
+    expect(res.status).toBe(500);
+    expect(body.success).toBe(false);
+    expect(body.error.code).toBe('DATABASE_ERROR');
+    expect(body.data).toBeUndefined();
 
     spy.mockRestore();
+  });
+
+  test('Expired solve credentials require one refresh and one retry that saves an owned run', async () => {
+    const jwt = require('jsonwebtoken');
+    const env = require('../config/env');
+    const { hashToken } = require('../modules/auth/token');
+    const expired = jwt.sign({ sub: userA.id, type: 'access' }, env.JWT_SECRET,
+      { issuer: 'numlab-backend', expiresIn: -1 });
+    const refreshToken = jwt.sign({ sub: userA.id, type: 'refresh',
+      iat: Math.floor(Date.now() / 1000) - 60 }, env.JWT_SECRET,
+      { issuer: 'numlab-backend', expiresIn: '7d' });
+    await prisma.refreshToken.create({ data: { userId: userA.id,
+      tokenHash: hashToken(refreshToken), expiresAt: new Date(Date.now() + 86400000) } });
+    const payload = { equation: 'x^2 - 25', lowerBound: 0, upperBound: 6, tolerance: 0.001 };
+    const solve = (accessToken) => fetch(`${baseUrl}/api/v1/solve/root/bisection`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}` }, body: JSON.stringify(payload),
+    });
+    const rejected = await solve(expired);
+    expect(rejected.status).toBe(401);
+    expect((await rejected.json()).error.code).toBe('TOKEN_EXPIRED');
+    const refreshed = await fetch(`${baseUrl}/api/v1/auth/refresh`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+    expect(refreshed.status).toBe(200);
+    const { data: { tokens } } = await refreshed.json();
+    const retried = await solve(tokens.accessToken);
+    expect(retried.status).toBe(200);
+    const { data } = await retried.json();
+    const run = await prisma.solverRun.findUnique({ where: { id: data.runId } });
+    expect(run.userId).toBe(userA.id);
+    const history = await fetch(`${baseUrl}/api/v1/users/me/history`, {
+      headers: { Authorization: `Bearer ${tokens.accessToken}` },
+    });
+    expect((await history.json()).data.runs[0].id).toBe(data.runId);
   });
 
   test('regression: database error details and raw Postgres messages are never leaked to client', async () => {
