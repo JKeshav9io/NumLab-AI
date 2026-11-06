@@ -20,6 +20,8 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
   final GetHistoryRunsUseCase _getHistoryRunsUseCase;
   final GetHistoryRunByIdUseCase _getHistoryRunByIdUseCase;
 
+  int _requestVersion = 0;
+
   Future<void> _onLoadRequested(
     HistoryLoadRequested event,
     Emitter<HistoryState> emit,
@@ -28,6 +30,7 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
       return;
     }
 
+    final version = ++_requestVersion;
     emit(const HistoryLoading());
 
     final result = await _getHistoryRunsUseCase(
@@ -35,7 +38,10 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
       offset: event.offset,
     );
 
-    if (state is! HistoryLoading) {
+    if (isClosed ||
+        emit.isDone ||
+        version != _requestVersion ||
+        state is! HistoryLoading) {
       return;
     }
 
@@ -54,10 +60,12 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
     HistoryRefreshRequested event,
     Emitter<HistoryState> emit,
   ) async {
-    if (state is HistoryLoading || state is HistoryRefreshing) {
+    if (!event.force &&
+        (state is HistoryLoading || state is HistoryRefreshing)) {
       return;
     }
 
+    final version = ++_requestVersion;
     final existingRuns = state.currentRuns;
     final existingPagination = state.currentPagination;
 
@@ -77,7 +85,10 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
       limit: limit,
     );
 
-    if (state is! HistoryRefreshing && state is! HistoryLoading) {
+    if (isClosed ||
+        emit.isDone ||
+        version != _requestVersion ||
+        (state is! HistoryRefreshing && state is! HistoryLoading)) {
       return;
     }
 
@@ -113,6 +124,7 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
       return;
     }
 
+    final version = ++_requestVersion;
     final existingRuns = state.currentRuns;
     final nextOffset = pagination.offset + pagination.limit;
 
@@ -128,7 +140,10 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
       offset: nextOffset,
     );
 
-    if (state is! HistoryLoadingMore) {
+    if (isClosed ||
+        emit.isDone ||
+        version != _requestVersion ||
+        state is! HistoryLoadingMore) {
       return;
     }
 
@@ -170,6 +185,7 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
       return;
     }
 
+    final version = ++_requestVersion;
     final existingRuns = state.currentRuns;
     final existingPagination = state.currentPagination;
 
@@ -183,7 +199,10 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
 
     final result = await _getHistoryRunByIdUseCase(event.runId);
 
-    if (state is! HistoryDetailLoading ||
+    if (isClosed ||
+        emit.isDone ||
+        version != _requestVersion ||
+        state is! HistoryDetailLoading ||
         (state as HistoryDetailLoading).runId != event.runId) {
       return;
     }
@@ -212,5 +231,11 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
         );
       },
     );
+  }
+
+  @override
+  Future<void> close() {
+    _requestVersion++;
+    return super.close();
   }
 }

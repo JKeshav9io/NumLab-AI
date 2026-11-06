@@ -27,7 +27,13 @@ final class HistoryLoadRequested extends HistoryEvent {
 
 /// Dispatched to refresh calculation history from offset 0, replacing the current list.
 final class HistoryRefreshRequested extends HistoryEvent {
-  const HistoryRefreshRequested();
+  const HistoryRefreshRequested({this.force = false});
+
+  // A committed save must supersede reads started before that save.
+  final bool force;
+
+  @override
+  List<Object?> get props => [force];
 }
 
 /// Dispatched to request the next page of calculation history based on current pagination.
