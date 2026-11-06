@@ -9,6 +9,11 @@ void main() {
       'id': 'run-123-uuid',
       'userId': 'user-456-uuid',
       'method': 'root/bisection',
+      'summaryPayload': <String, dynamic>{
+        'method': 'Bisection Method',
+        'status': 'converged',
+        'equation': 'x^2 - 4',
+      },
       'inputPayload': <String, dynamic>{
         'equation': 'x^2 - 4',
         'lowerBound': 0,
@@ -42,6 +47,10 @@ void main() {
       expect(model.id, 'run-123-uuid');
       expect(model.userId, 'user-456-uuid');
       expect(model.method, 'root/bisection');
+      expect(
+        HistoryRunModel.fromEntity(model.toEntity()).toJson()['summaryPayload'],
+        validJson['summaryPayload'],
+      );
       expect(model.inputPayload['equation'], 'x^2 - 4');
       expect(model.outputPayload['method'], 'Bisection Method');
       expect(model.createdAt, DateTime.parse('2026-09-30T10:00:00.000Z'));

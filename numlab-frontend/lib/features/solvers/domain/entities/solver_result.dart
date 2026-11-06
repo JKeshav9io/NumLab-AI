@@ -20,6 +20,8 @@ class SolverResult extends Equatable {
     this.executionTimeMs = 0,
     this.requestId,
     this.timestamp,
+    this.runId,
+    this.createdAt,
   });
 
   /// The method name returned by the solver service.
@@ -57,6 +59,9 @@ class SolverResult extends Equatable {
 
   /// Timestamp extracted from response metadata.
   final String? timestamp;
+
+  final String? runId;
+  final String? createdAt;
 
   /// Helper to safely extract and parse a numeric value.
   static num? _parseNum(dynamic val) {
@@ -157,5 +162,7 @@ class SolverResult extends Equatable {
     executionTimeMs,
     requestId,
     timestamp,
+    runId,
+    createdAt,
   ];
 }

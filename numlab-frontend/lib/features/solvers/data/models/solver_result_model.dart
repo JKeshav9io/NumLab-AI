@@ -58,6 +58,8 @@ class SolverResultModel extends SolverResult {
     super.executionTimeMs = 0,
     super.requestId,
     super.timestamp,
+    super.runId,
+    super.createdAt,
   });
 
   /// Parses from either the complete response envelope `{ success, data, meta }`
@@ -142,6 +144,8 @@ class SolverResultModel extends SolverResult {
       executionTimeMs: executionTime,
       requestId: requestId,
       timestamp: timestamp,
+      runId: data['runId'] as String?,
+      createdAt: data['createdAt'] as String?,
     );
   }
 
@@ -166,6 +170,8 @@ class SolverResultModel extends SolverResult {
       executionTimeMs: entity.executionTimeMs,
       requestId: entity.requestId,
       timestamp: entity.timestamp,
+      runId: entity.runId,
+      createdAt: entity.createdAt,
     );
   }
 
@@ -187,11 +193,15 @@ class SolverResultModel extends SolverResult {
     executionTimeMs: executionTimeMs,
     requestId: requestId,
     timestamp: timestamp,
+    runId: runId,
+    createdAt: createdAt,
   );
 
   Map<String, dynamic> toJson() {
     return {
       'method': method,
+      if (runId != null) 'runId': runId,
+      if (createdAt != null) 'createdAt': createdAt,
       if (status != null) 'status': status,
       'input': input,
       'iterations': iterations,

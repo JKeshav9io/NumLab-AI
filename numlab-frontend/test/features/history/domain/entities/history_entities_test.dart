@@ -310,6 +310,7 @@ void main() {
         'root/bisection',
         const {'a': 1},
         const {'b': 2},
+        const <String, dynamic>{},
         timestamp,
         [explanation],
       ]);

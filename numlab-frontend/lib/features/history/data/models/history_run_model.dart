@@ -12,6 +12,7 @@ class HistoryRunModel extends HistoryRun {
     super.userId,
     super.inputPayload = const <String, dynamic>{},
     super.outputPayload = const <String, dynamic>{},
+    super.summaryPayload = const <String, dynamic>{},
     super.aiExplanations = const <AiExplanationModel>[],
   });
 
@@ -41,6 +42,9 @@ class HistoryRunModel extends HistoryRun {
       method: json['method']?.toString() ?? '',
       inputPayload: parseMap(json['inputPayload'] ?? json['input_payload']),
       outputPayload: parseMap(json['outputPayload'] ?? json['output_payload']),
+      summaryPayload: parseMap(
+        json['summaryPayload'] ?? json['summary_payload'],
+      ),
       createdAt:
           DateTime.tryParse(
             json['createdAt']?.toString() ??
@@ -60,6 +64,7 @@ class HistoryRunModel extends HistoryRun {
       method: entity.method,
       inputPayload: entity.inputPayload,
       outputPayload: entity.outputPayload,
+      summaryPayload: entity.summaryPayload,
       createdAt: entity.createdAt,
       aiExplanations: entity.aiExplanations
           .map(
@@ -78,6 +83,7 @@ class HistoryRunModel extends HistoryRun {
       method: method,
       inputPayload: inputPayload,
       outputPayload: outputPayload,
+      summaryPayload: summaryPayload,
       createdAt: createdAt,
       aiExplanations: aiExplanations
           .map(
@@ -132,6 +138,7 @@ class HistoryRunModel extends HistoryRun {
       'method': method,
       'inputPayload': inputPayload,
       'outputPayload': outputPayload,
+      'summaryPayload': summaryPayload,
       'createdAt': createdAt.toIso8601String(),
       if (aiExplanations.isNotEmpty)
         'aiExplanations': aiExplanations

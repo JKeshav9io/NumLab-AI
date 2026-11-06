@@ -45,6 +45,24 @@ void main() {
   });
 
   group('SolverResultModel', () {
+    test('saved run metadata survives model and entity round trips', () {
+      const runId = '7b895781-bfd0-4d43-aefb-f9547d2524ff';
+      const createdAt = '2026-11-06T12:30:00.000Z';
+      final result = SolverResultModel.fromJson(const {
+        'data': {
+          'method': 'Bisection Method',
+          'runId': runId,
+          'createdAt': createdAt,
+        },
+      });
+
+      final restored = SolverResultModel.fromEntity(result.toEntity());
+      expect(restored.runId, runId);
+      expect(restored.createdAt, createdAt);
+      expect(restored.toJson()['runId'], runId);
+      expect(restored.toJson()['createdAt'], createdAt);
+    });
+
     final sampleEnvelope = {
       'success': true,
       'data': {

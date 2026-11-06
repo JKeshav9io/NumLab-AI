@@ -12,6 +12,7 @@ class HistoryRun extends Equatable {
     this.userId,
     this.inputPayload = const <String, dynamic>{},
     this.outputPayload = const <String, dynamic>{},
+    this.summaryPayload = const <String, dynamic>{},
     this.aiExplanations = const <HistoryExplanation>[],
   });
 
@@ -29,6 +30,9 @@ class HistoryRun extends Equatable {
 
   /// Structured calculation outputs returned by the backend solver.
   final Map<String, dynamic> outputPayload;
+
+  /// Compact list labels, without the full calculation payloads.
+  final Map<String, dynamic> summaryPayload;
 
   /// Execution timestamp.
   final DateTime createdAt;
@@ -131,6 +135,7 @@ class HistoryRun extends Equatable {
     method,
     inputPayload,
     outputPayload,
+    summaryPayload,
     createdAt,
     aiExplanations,
   ];
