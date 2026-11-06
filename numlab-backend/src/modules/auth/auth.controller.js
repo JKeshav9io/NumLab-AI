@@ -36,7 +36,7 @@ async function login(req, res) {
  */
 async function refresh(req, res) {
   const validated = validateRefreshRequest(req.body);
-  const result = await authService.refresh(validated.refreshToken);
+  const result = await authService.refresh(validated.refreshToken, req.id);
 
   return sendSuccess(res, result, req.id, 200);
 }

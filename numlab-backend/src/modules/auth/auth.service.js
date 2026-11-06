@@ -112,13 +112,15 @@ async function login(email, password) {
  * @param {string} rawRefreshToken
  * @returns {Promise<{ tokens: Object }>}
  */
-async function refresh(rawRefreshToken) {
+async function refresh(rawRefreshToken, requestId) {
   // Verify token format and signature
   const decoded = verifyToken(rawRefreshToken, 'refresh');
   const tokenHash = hashToken(rawRefreshToken);
 
   // Look up stored active token in database
-  const storedToken = await refreshTokenRepository.findByTokenHash(tokenHash);
+  const lookupStarted = Date.now();
+  const storedToken = await refreshTokenRepository.findByTokenHash(tokenHash)
+    .finally(() => logger.info({ requestId, operation: 'refresh.lookup', elapsedMs: Date.now() - lookupStarted }, 'DB timing'));
   if (!storedToken) {
     throw new AppError(
       'Refresh token is invalid or has been revoked',
@@ -129,7 +131,9 @@ async function refresh(rawRefreshToken) {
 
   const tokens = await prisma.$transaction(async (tx) => {
     // A concurrent rotation must not consume the same token twice.
-    const revokedCount = await refreshTokenRepository.revokeToken(tokenHash, tx);
+    const revokeStarted = Date.now();
+    const revokedCount = await refreshTokenRepository.revokeToken(tokenHash, tx)
+      .finally(() => logger.info({ requestId, operation: 'refresh.revoke', elapsedMs: Date.now() - revokeStarted }, 'DB timing'));
     if (!revokedCount) {
       throw new AppError(
         'Refresh token is invalid or has been revoked',
@@ -137,7 +141,7 @@ async function refresh(rawRefreshToken) {
         errorCodes.TOKEN_REVOKED
       );
     }
-    return issueTokenPair(decoded.sub, tx);
+    return issueTokenPair(decoded.sub, tx, requestId);
   });
 
   logger.info({ userId: decoded.sub }, 'Refresh token rotated successfully');
@@ -178,18 +182,21 @@ async function logoutAllDevices(userId) {
  * @param {string} userId
  * @returns {Promise<{ accessToken: string, refreshToken: string, expiresIn: number }>}
  */
-async function issueTokenPair(userId, client = prisma) {
+async function issueTokenPair(userId, client = prisma, requestId) {
   const accessToken = generateAccessToken(userId);
   const refreshToken = generateRefreshToken(userId);
   const tokenHash = hashToken(refreshToken);
   const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
 
   // Persist refresh token hash in DB
+  const insertStarted = Date.now();
   await refreshTokenRepository.create({
     userId,
     tokenHash,
     expiresAt,
-  }, client);
+  }, client).finally(() => {
+    if (requestId) logger.info({ requestId, operation: 'refresh.insert', elapsedMs: Date.now() - insertStarted }, 'DB timing');
+  });
 
   return {
     accessToken,

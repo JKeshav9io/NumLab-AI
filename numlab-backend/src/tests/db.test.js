@@ -25,7 +25,35 @@ describe('Phase 3 query contracts', () => {
     });
   });
 
+  test('refresh lookup excludes the unused user data but still checks active users', async () => {
+    const lookup = jest.spyOn(prisma.refreshToken, 'findFirst').mockResolvedValue(null);
+    await require('../db/repositories/refreshTokenRepository').findByTokenHash('hash');
+    expect(lookup.mock.calls[0][0]).not.toHaveProperty('include');
+    expect(lookup.mock.calls[0][0].where.user).toEqual({ deletedAt: null });
+  });
 
+  test('refresh and history emit only five small request-correlated DB timings', async () => {
+    const repository = require('../db/repositories/refreshTokenRepository');
+    const logger = require('../config/logger');
+    const { generateRefreshToken } = require('../modules/auth/token');
+    const info = jest.spyOn(logger, 'info').mockImplementation(() => {});
+    jest.spyOn(repository, 'findByTokenHash').mockResolvedValue({ id: 'token' });
+    jest.spyOn(repository, 'revokeToken').mockResolvedValue(1);
+    jest.spyOn(repository, 'create').mockResolvedValue({ id: 'new-token' });
+    jest.spyOn(prisma, '$transaction').mockImplementation((fn) => fn(prisma));
+    jest.spyOn(prisma.solverRun, 'findMany').mockResolvedValue([]);
+    jest.spyOn(prisma.solverRun, 'count').mockResolvedValue(0);
+    await require('../modules/auth/auth.service').refresh(generateRefreshToken('user'), 'request-123');
+    await solverRunRepository.findByUserId('user', { requestId: 'request-123' });
+    const timings = info.mock.calls.filter(([, message]) => message === 'DB timing').map(([data]) => data);
+    expect(timings.map((entry) => entry.operation).sort()).toEqual([
+      'history.count', 'history.list', 'refresh.insert', 'refresh.lookup', 'refresh.revoke',
+    ]);
+    for (const timing of timings) {
+      expect(timing).toEqual({ requestId: 'request-123', operation: expect.any(String), elapsedMs: expect.any(Number) });
+      expect(timing.elapsedMs).toBeGreaterThanOrEqual(0);
+    }
+  });
 });
 
 describe('Database & Repository Layer Integration', () => {

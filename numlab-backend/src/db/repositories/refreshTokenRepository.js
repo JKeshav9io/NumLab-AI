@@ -33,7 +33,7 @@ async function create(data, client = prisma) {
 
 /**
  * Finds an active, unrevoked, non-expired refresh token by its SHA-256 hash.
- * Includes user record (excluding deleted users).
+ * Excludes deleted users.
  * @param {string} tokenHash
  * @returns {Promise<Object|null>}
  */
@@ -49,9 +49,6 @@ async function findByTokenHash(tokenHash) {
         user: {
           deletedAt: null,
         },
-      },
-      include: {
-        user: true,
       },
     });
   } catch (error) {
