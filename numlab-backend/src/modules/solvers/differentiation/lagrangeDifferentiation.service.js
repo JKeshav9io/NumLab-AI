@@ -74,7 +74,6 @@ function computeBasisDerivative(points, index, x) {
 }
 
 module.exports = {
-  computeBasisDerivative,
   solveLagrangeDifferentiation,
   lagrangeDifferentiation: solveLagrangeDifferentiation,
 };

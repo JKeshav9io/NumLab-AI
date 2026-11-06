@@ -1,7 +1,7 @@
 'use strict';
 
 const { prisma } = require('../db');
-const { generateAccessToken, generateRefreshToken } = require('../modules/auth/token');
+const { generateRefreshToken } = require('../modules/auth/token');
 
 describe('Authentication API & Protected Routes', () => {
   test('refresh tokens issued in the same second have distinct IDs', () => {

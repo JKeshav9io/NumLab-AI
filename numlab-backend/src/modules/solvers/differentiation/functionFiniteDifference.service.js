@@ -101,7 +101,6 @@ function evaluateStencil(evaluate, x, h, variant) {
 }
 
 module.exports = {
-  evaluateStencil,
   solveFunctionFiniteDifference,
   functionFiniteDifference: solveFunctionFiniteDifference,
 };

@@ -156,7 +156,6 @@ module.exports = {
   buildTabularGraphData,
   buildTabularInput,
   compileFunction,
-  findPoint,
   getEqualSpacing,
   requirePoint,
   round,

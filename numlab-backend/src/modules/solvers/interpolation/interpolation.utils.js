@@ -3,7 +3,6 @@
 const { AppError, errorCodes } = require('../../../common/errors');
 const {
   DEFAULT_GRAPH_POINT_COUNT,
-  EQUAL_SPACING_TOLERANCE,
   INTERPOLATION_NEAR_ZERO_THRESHOLD,
 } = require('./interpolation.constants');
 const round = require('../../../common/utils/round');
@@ -135,23 +134,6 @@ function getEqualSpacing(points) {
   }
 
   return points[1].x - points[0].x;
-}
-
-function isEquallySpaced(points, tolerance = EQUAL_SPACING_TOLERANCE) {
-  if (points.length < 3) {
-    return true;
-  }
-
-  const spacing = getEqualSpacing(points);
-
-  return points.every((point, index) => {
-    if (index === 0) {
-      return true;
-    }
-
-    const currentSpacing = point.x - points[index - 1].x;
-    return Math.abs(currentSpacing - spacing) <= tolerance;
-  });
 }
 
 function buildForwardDifferenceMatrix(points) {
@@ -428,10 +410,7 @@ module.exports = {
   emptyGraphData,
   evaluateNewtonBackwardFromMatrix,
   evaluateNewtonForwardFromMatrix,
-  factorial,
-  forwardCoefficient,
   getEqualSpacing,
-  isEquallySpaced,
   round,
   roundPoint,
   roundPoints,

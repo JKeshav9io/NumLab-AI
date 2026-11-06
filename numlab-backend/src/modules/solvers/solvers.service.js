@@ -31,19 +31,19 @@ const { solveLagrangeDifferentiation } = require('./differentiation/lagrangeDiff
 const { solveFunctionFiniteDifference } = require('./differentiation/functionFiniteDifference.service');
 
 function runBisection(params, context = {}) {
-  return runRootSolver('root/bisection', solveBisection, params, context);
+  return runSolver('root/bisection', solveBisection, params, context);
 }
 
 function runNewtonRaphson(params, context = {}) {
-  return runRootSolver('root/newton', solveNewtonRaphson, params, context);
+  return runSolver('root/newton', solveNewtonRaphson, params, context);
 }
 
 function runSecant(params, context = {}) {
-  return runRootSolver('root/secant', solveSecant, params, context);
+  return runSolver('root/secant', solveSecant, params, context);
 }
 
 function runRegulaFalsi(params, context = {}) {
-  return runRootSolver('root/regula-falsi', solveRegulaFalsi, params, context);
+  return runSolver('root/regula-falsi', solveRegulaFalsi, params, context);
 }
 
 function runGaussElimination(params, context = {}) {
@@ -136,10 +136,6 @@ function runLagrangeDifferentiation(params, context = {}) {
 
 function runFunctionFiniteDifference(params, context = {}) {
   return runSolver('differentiation/function-finite-difference', solveFunctionFiniteDifference, params, context);
-}
-
-function runRootSolver(method, solver, params, context) {
-  return runSolver(method, solver, params, context);
 }
 
 async function runSolver(method, solver, params, context = {}) {
