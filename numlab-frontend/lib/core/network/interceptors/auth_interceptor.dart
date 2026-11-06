@@ -50,6 +50,7 @@ class AuthInterceptor extends QueuedInterceptor {
   final void Function()? _onSessionRevoked;
 
   Completer<bool>? _refreshCompleter;
+  bool _sessionRevoked = false;
 
   /// Request extra key used to track retry attempts and prevent infinite loops.
   static const String retryCountExtraKey = 'numlab_auth_retry_count';
@@ -81,11 +82,7 @@ class AuthInterceptor extends QueuedInterceptor {
 
     // 2. If a refresh is currently running, wait for it before dispatching
     if (_refreshCompleter != null) {
-      try {
-        await _refreshCompleter!.future;
-      } on Object catch (_) {
-        // Silently proceed if refresh fails; the request will proceed or fail naturally.
-      }
+      await _refreshCompleter!.future;
     }
 
     // 3. Attach Bearer token if not explicitly provided
@@ -100,6 +97,8 @@ class AuthInterceptor extends QueuedInterceptor {
     return handler.next(options);
   }
 
+  void resetSession() => _sessionRevoked = false;
+
   @override
   Future<void> onError(
     DioException err,
@@ -113,14 +112,13 @@ class AuthInterceptor extends QueuedInterceptor {
           code == 'TOKEN_REVOKED' ||
           code == 'INVALID_TOKEN' ||
           code == 'UNAUTHORIZED') {
-        await _secureStorageService.clearTokens();
-        _onSessionRevoked?.call();
+        await _endSession();
       }
       return handler.next(err);
     }
 
     // 2. Only handle 401 TOKEN_EXPIRED errors
-    if (!_isTokenExpired(err)) {
+    if (_sessionRevoked || !_isTokenExpired(err)) {
       return handler.next(err);
     }
 
@@ -189,8 +187,7 @@ class AuthInterceptor extends QueuedInterceptor {
   Future<bool> _performRefresh() async {
     final refreshToken = await _secureStorageService.getRefreshToken();
     if (refreshToken == null || refreshToken.isEmpty) {
-      await _secureStorageService.clearTokens();
-      _onSessionRevoked?.call();
+      await _endSession();
       return false;
     }
 
@@ -236,15 +233,20 @@ class AuthInterceptor extends QueuedInterceptor {
           code == 'TOKEN_REVOKED' ||
           code == 'INVALID_TOKEN' ||
           code == 'UNAUTHORIZED') {
-        await _secureStorageService.clearTokens();
-        _onSessionRevoked?.call();
+        await _endSession();
       }
       return false;
     } on Object catch (_) {
-      await _secureStorageService.clearTokens();
-      _onSessionRevoked?.call();
+      await _endSession();
       return false;
     }
+  }
+
+  Future<void> _endSession() async {
+    if (_sessionRevoked) return;
+    _sessionRevoked = true;
+    await _secureStorageService.clearTokens();
+    _onSessionRevoked?.call();
   }
 
   Future<void> _retry(

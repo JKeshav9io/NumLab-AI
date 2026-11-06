@@ -13,6 +13,7 @@ class MockSecureStorageService implements SecureStorageService {
   String? refreshToken;
   int clearTokensCallCount = 0;
   int saveTokensCallCount = 0;
+  bool failRefreshWrite = false;
 
   @override
   Future<void> saveTokens({
@@ -21,6 +22,7 @@ class MockSecureStorageService implements SecureStorageService {
   }) async {
     saveTokensCallCount++;
     this.accessToken = accessToken;
+    if (failRefreshWrite) throw StateError('Secure storage write failed');
     this.refreshToken = refreshToken;
   }
 
@@ -178,6 +180,39 @@ void main() {
     test('initial state is AuthInitial', () {
       expect(authBloc.state, const AuthInitial());
     });
+
+    test(
+      'partial token-write failures end login, registration and refresh sessions',
+      () async {
+        mockStorage.failRefreshWrite = true;
+        mockLoginUseCase.handler =
+            ({required email, required password}) async => Right(tAuthResult);
+        mockRegisterUseCase.handler =
+            ({required email, required password}) async => Right(tAuthResult);
+        mockRefreshTokenUseCase.handler = ({required refreshToken}) async =>
+            const Right(tToken);
+        for (final event in const <AuthEvent>[
+          AuthLoginRequested(
+            email: 'student@example.com',
+            password: 'Password123',
+          ),
+          AuthRegisterRequested(
+            email: 'student@example.com',
+            password: 'Password123',
+          ),
+          AuthSessionRefreshRequested(),
+        ]) {
+          mockStorage.refreshToken = 'previous-refresh';
+          final ended = authBloc.stream.firstWhere(
+            (state) => state is AuthUnauthenticated,
+          );
+          authBloc.add(event);
+          await ended.timeout(const Duration(seconds: 2));
+          expect(mockStorage.accessToken, isNull);
+          expect(mockStorage.refreshToken, isNull);
+        }
+      },
+    );
 
     group('AuthInitializeRequested', () {
       test(

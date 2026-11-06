@@ -582,6 +582,97 @@ void main() {
 
     group('Concurrent Expired Requests & Queueing', () {
       test(
+        'three expired requests revoke once and a new login resets the guard',
+        () async {
+          mockStorage
+            ..accessToken = 'expired-access'
+            ..refreshToken = 'revoked-refresh';
+          var refreshCalls = 0;
+          var revokedCalls = 0;
+          fakeRefreshDio.onPost =
+              (
+                path, {
+                data,
+                queryParameters,
+                options,
+                cancelToken,
+                onSendProgress,
+                onReceiveProgress,
+              }) async {
+                refreshCalls++;
+                throw DioException(
+                  requestOptions: RequestOptions(path: path),
+                  response: Response<dynamic>(
+                    requestOptions: RequestOptions(path: path),
+                    statusCode: 401,
+                    data: {
+                      'error': {'code': 'TOKEN_REVOKED'},
+                    },
+                  ),
+                );
+              };
+          final dio = DioClient.create(
+            secureStorageService: mockStorage,
+            refreshDio: fakeRefreshDio,
+            onSessionRevoked: () => revokedCalls++,
+          );
+          addTearDown(() => dio.close(force: true));
+          dio.interceptors.add(
+            InterceptorsWrapper(
+              onRequest: (options, handler) {
+                if (options.path == ApiConstants.loginPath) {
+                  handler.resolve(
+                    Response<dynamic>(
+                      requestOptions: options,
+                      statusCode: 200,
+                      data: {'success': true},
+                    ),
+                    true,
+                  );
+                  return;
+                }
+                handler.reject(
+                  DioException(
+                    requestOptions: options,
+                    type: DioExceptionType.badResponse,
+                    response: Response<dynamic>(
+                      requestOptions: options,
+                      statusCode: 401,
+                      data: {
+                        'error': {'code': 'TOKEN_EXPIRED'},
+                      },
+                    ),
+                  ),
+                  true,
+                );
+              },
+            ),
+          );
+          Future<void> expiredRequest() async {
+            await expectLater(
+              dio.get<dynamic>('/users/me/history'),
+              throwsA(isA<DioException>()),
+            );
+          }
+
+          await Future.wait(List.generate(3, (_) => expiredRequest()));
+          expect(refreshCalls, 1);
+          expect(revokedCalls, 1);
+          expect(mockStorage.accessToken, isNull);
+          expect(mockStorage.refreshToken, isNull);
+          await dio.post<dynamic>(ApiConstants.loginPath);
+          await mockStorage.saveTokens(
+            accessToken: 'another-access',
+            refreshToken: 'another-refresh',
+          );
+          dio.interceptors.whereType<AuthInterceptor>().single.resetSession();
+          await expiredRequest();
+          expect(refreshCalls, 2);
+          expect(revokedCalls, 2);
+        },
+      );
+
+      test(
         'simultaneous expired requests share a single refresh call and all retry successfully',
         () async {
           mockStorage

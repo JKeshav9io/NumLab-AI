@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:get_it/get_it.dart';
 import 'package:logger/logger.dart';
 import 'package:numlab_frontend/core/network/dio_client.dart';
+import 'package:numlab_frontend/core/network/interceptors/auth_interceptor.dart';
 import 'package:numlab_frontend/core/router/app_router.dart';
 import 'package:numlab_frontend/core/storage/secure_storage_service.dart';
 import 'package:numlab_frontend/features/auth/data/datasources/auth_remote_data_source.dart';
@@ -107,6 +108,12 @@ Future<void> initDependencies() async {
         logoutUseCase: sl<LogoutUseCase>(),
         logoutAllUseCase: sl<LogoutAllUseCase>(),
         getCurrentUserUseCase: sl<GetCurrentUserUseCase>(),
+        onSessionStarted: () {
+          for (final interceptor
+              in sl<Dio>().interceptors.whereType<AuthInterceptor>()) {
+            interceptor.resetSession();
+          }
+        },
       ),
     )
     // 5. Routing (Protected by AuthBloc)

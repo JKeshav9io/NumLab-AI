@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:numlab_frontend/core/error/failures.dart';
 import 'package:numlab_frontend/core/storage/secure_storage_service.dart';
+import 'package:numlab_frontend/features/auth/domain/entities/token.dart';
 import 'package:numlab_frontend/features/auth/domain/entities/user.dart';
 import 'package:numlab_frontend/features/auth/domain/usecases/usecases.dart';
 import 'package:numlab_frontend/features/auth/presentation/bloc/auth_event.dart';
@@ -17,6 +18,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required LogoutUseCase logoutUseCase,
     required LogoutAllUseCase logoutAllUseCase,
     required GetCurrentUserUseCase getCurrentUserUseCase,
+    void Function()? onSessionStarted,
   }) : _secureStorageService = secureStorageService,
        _loginUseCase = loginUseCase,
        _registerUseCase = registerUseCase,
@@ -24,6 +26,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
        _logoutUseCase = logoutUseCase,
        _logoutAllUseCase = logoutAllUseCase,
        _getCurrentUserUseCase = getCurrentUserUseCase,
+       _onSessionStarted = onSessionStarted,
        super(const AuthInitial()) {
     on<AuthInitializeRequested>(_onInitializeRequested);
     on<AuthLoginRequested>(_onLoginRequested);
@@ -42,6 +45,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LogoutUseCase _logoutUseCase;
   final LogoutAllUseCase _logoutAllUseCase;
   final GetCurrentUserUseCase _getCurrentUserUseCase;
+  final void Function()? _onSessionStarted;
 
   Future<Either<Failure, User>>? _inFlightCurrentUserFuture;
 
@@ -104,10 +108,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthError(failure: failure));
       },
       (authResult) async {
-        await _secureStorageService.saveTokens(
-          accessToken: authResult.tokens.accessToken,
-          refreshToken: authResult.tokens.refreshToken,
-        );
+        if (!await _saveTokens(authResult.tokens, emit)) return;
         emit(AuthAuthenticated(user: authResult.user));
       },
     );
@@ -129,10 +130,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthError(failure: failure));
       },
       (authResult) async {
-        await _secureStorageService.saveTokens(
-          accessToken: authResult.tokens.accessToken,
-          refreshToken: authResult.tokens.refreshToken,
-        );
+        if (!await _saveTokens(authResult.tokens, emit)) return;
         emit(AuthAuthenticated(user: authResult.user));
       },
     );
@@ -193,10 +191,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         }
       },
       (token) async {
-        await _secureStorageService.saveTokens(
-          accessToken: token.accessToken,
-          refreshToken: token.refreshToken,
-        );
+        if (!await _saveTokens(token, emit)) return;
 
         final userResult = await _fetchCurrentUserSingleFlight();
         userResult.fold(
@@ -234,6 +229,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(AuthAuthenticated(user: user));
       },
     );
+  }
+
+  Future<bool> _saveTokens(Token tokens, Emitter<AuthState> emit) async {
+    try {
+      await _secureStorageService.saveTokens(
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      );
+      _onSessionStarted?.call();
+      return true;
+    } on Object {
+      await _secureStorageService.clearTokens();
+      emit(const AuthUnauthenticated());
+      return false;
+    }
   }
 
   Future<void> _onSessionRevoked(

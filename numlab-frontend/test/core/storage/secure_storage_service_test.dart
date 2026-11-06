@@ -135,15 +135,22 @@ void main() {
 
     for (final recovering in [false, true]) {
       test(
-        'both tokens remain readable after cold key initialization: recovery=$recovering',
+        recovering
+            ? 'cold storage write failures propagate without a retry'
+            : 'both tokens remain readable after cold key initialization',
         () async {
           final storage = SecureStorageServiceImpl(
             storage: ColdKeyFlutterSecureStorage(failFirstWrite: recovering),
           );
-          await storage.saveTokens(
+          final saved = storage.saveTokens(
             accessToken: 'fresh-access',
             refreshToken: 'fresh-refresh',
           );
+          if (recovering) {
+            await expectLater(saved, throwsStateError);
+            return;
+          }
+          await saved;
           expect(await storage.getAccessToken(), 'fresh-access');
           expect(await storage.getRefreshToken(), 'fresh-refresh');
         },
