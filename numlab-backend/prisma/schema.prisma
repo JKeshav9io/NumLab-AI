@@ -53,12 +53,13 @@ model SolverRun {
   method         String          @map("method") @db.VarChar(100)
   inputPayload   Json            @map("input_payload")
   outputPayload  Json            @map("output_payload")
+  summaryPayload Json            @default("{}") @map("summary_payload")
   createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
 
   user           User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
   aiExplanations AiExplanation[]
 
-  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([method])
   @@map("solver_runs")
 }
