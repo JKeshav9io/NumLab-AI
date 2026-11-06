@@ -4,6 +4,16 @@ const { prisma } = require('../db');
 const { generateAccessToken, generateRefreshToken } = require('../modules/auth/token');
 
 describe('Authentication API & Protected Routes', () => {
+  test('refresh tokens issued in the same second have distinct IDs', () => {
+    const clock = jest.spyOn(Date, 'now').mockReturnValue(1793880000000);
+    try {
+      const first = generateRefreshToken('same-user');
+      const second = generateRefreshToken('same-user');
+      expect(first === second).toBe(false);
+    } finally {
+      clock.mockRestore();
+    }
+  });
   let server;
   let baseUrl;
   const uniquePrefix = `auth_test_${Date.now()}`;
@@ -33,8 +43,6 @@ describe('Authentication API & Protected Routes', () => {
           where: { id: registeredUserId },
         });
       }
-    } catch (_err) {
-      // Ignore cleanup error
     } finally {
       await new Promise((resolve) => server.close(resolve));
       await prisma.$disconnect();
@@ -42,6 +50,7 @@ describe('Authentication API & Protected Routes', () => {
   });
 
   describe('POST /api/v1/auth/register', () => {
+
     test('successfully registers a new user and returns token pair', async () => {
       const response = await fetch(`${baseUrl}/api/v1/auth/register`, {
         method: 'POST',
@@ -166,6 +175,27 @@ describe('Authentication API & Protected Routes', () => {
   });
 
   describe('POST /api/v1/auth/refresh (Token Rotation)', () => {
+    test('failed replacement insert rolls back the old token revocation', async () => {
+      const repository = require('../db/repositories/refreshTokenRepository');
+      const { hashToken } = require('../modules/auth/token');
+      const { AppError, errorCodes } = require('../common/errors');
+      const insert = jest.spyOn(repository, 'create').mockRejectedValueOnce(
+        new AppError('Failed to persist refresh token', 500, errorCodes.DATABASE_ERROR)
+      );
+      try {
+        const response = await fetch(`${baseUrl}/api/v1/auth/refresh`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: currentRefreshToken }),
+        });
+        expect(response.status).toBe(500);
+        const stored = await prisma.refreshToken.findUnique({
+          where: { tokenHash: hashToken(currentRefreshToken) },
+        });
+        expect(stored.revokedAt).toBeNull();
+      } finally {
+        insert.mockRestore();
+      }
+    });
     test('rotates refresh token and returns new token pair', async () => {
       const oldRefreshToken = currentRefreshToken;
 

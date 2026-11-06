@@ -127,20 +127,18 @@ async function refresh(rawRefreshToken) {
     );
   }
 
-  // REFRESH TOKEN ROTATION:
-  // Atomically invalidate the old refresh token. If 0 rows were updated,
-  // a concurrent request or replay already consumed this token.
-  const revokedCount = await refreshTokenRepository.revokeToken(tokenHash);
-  if (!revokedCount || revokedCount === 0) {
-    throw new AppError(
-      'Refresh token is invalid or has been revoked',
-      401,
-      errorCodes.TOKEN_REVOKED
-    );
-  }
-
-  // Issue brand new token pair
-  const tokens = await issueTokenPair(decoded.sub);
+  const tokens = await prisma.$transaction(async (tx) => {
+    // A concurrent rotation must not consume the same token twice.
+    const revokedCount = await refreshTokenRepository.revokeToken(tokenHash, tx);
+    if (!revokedCount) {
+      throw new AppError(
+        'Refresh token is invalid or has been revoked',
+        401,
+        errorCodes.TOKEN_REVOKED
+      );
+    }
+    return issueTokenPair(decoded.sub, tx);
+  });
 
   logger.info({ userId: decoded.sub }, 'Refresh token rotated successfully');
 
@@ -180,7 +178,7 @@ async function logoutAllDevices(userId) {
  * @param {string} userId
  * @returns {Promise<{ accessToken: string, refreshToken: string, expiresIn: number }>}
  */
-async function issueTokenPair(userId) {
+async function issueTokenPair(userId, client = prisma) {
   const accessToken = generateAccessToken(userId);
   const refreshToken = generateRefreshToken(userId);
   const tokenHash = hashToken(refreshToken);
@@ -191,7 +189,7 @@ async function issueTokenPair(userId) {
     userId,
     tokenHash,
     expiresAt,
-  });
+  }, client);
 
   return {
     accessToken,

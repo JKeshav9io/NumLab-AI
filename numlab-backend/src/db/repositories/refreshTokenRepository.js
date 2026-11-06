@@ -12,9 +12,9 @@ const { AppError, errorCodes } = require('../../common/errors');
  * @param {Date} data.expiresAt - Expiration timestamp
  * @returns {Promise<Object>} Created RefreshToken record
  */
-async function create(data) {
+async function create(data, client = prisma) {
   try {
-    return await prisma.refreshToken.create({
+    return await client.refreshToken.create({
       data: {
         userId: data.userId,
         tokenHash: data.tokenHash,
@@ -69,9 +69,9 @@ async function findByTokenHash(tokenHash) {
  * @param {string} tokenHash
  * @returns {Promise<number>} Count of revoked tokens (0 or 1)
  */
-async function revokeToken(tokenHash) {
+async function revokeToken(tokenHash, client = prisma) {
   try {
-    const result = await prisma.refreshToken.updateMany({
+    const result = await client.refreshToken.updateMany({
       where: {
         tokenHash,
         revokedAt: null,

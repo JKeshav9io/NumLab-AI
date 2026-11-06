@@ -41,6 +41,7 @@ function generateRefreshToken(userId) {
     {
       expiresIn: env.JWT_EXPIRES_IN,
       issuer: 'numlab-backend',
+      jwtid: crypto.randomUUID(),
     }
   );
 }
