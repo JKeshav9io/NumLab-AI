@@ -50,6 +50,20 @@ describe('Authentication API & Protected Routes', () => {
   });
 
   describe('POST /api/v1/auth/register', () => {
+    test('auth and authenticated responses prevent shared caching, including errors', async () => {
+      for (const [path, options] of [
+        ['/auth/login', { method: 'POST' }],
+        ['/auth/refresh', { method: 'POST' }],
+        ['/users/me', {}],
+        ['/reports/invalid', { method: 'POST' }],
+        ['/solve/root/bisection', { method: 'POST', headers: { Authorization: 'Bearer invalid' } }],
+      ]) {
+        const response = await fetch(`${baseUrl}/api/v1${path}`, options);
+        expect(response.status).toBeGreaterThanOrEqual(400);
+        expect(response.headers.get('cache-control')).toBe('private, no-store');
+        await response.arrayBuffer();
+      }
+    });
 
     test('successfully registers a new user and returns token pair', async () => {
       const response = await fetch(`${baseUrl}/api/v1/auth/register`, {

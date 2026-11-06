@@ -21,6 +21,12 @@ function createApp(options = {}) {
 
   app.use(helmet());
   app.use(cors());
+  app.use('/api/v1', (req, res, next) => {
+    if (req.headers.authorization || /^\/(auth|users|reports)(\/|$)/.test(req.path)) {
+      res.set('Cache-Control', 'private, no-store');
+    }
+    next();
+  });
   app.use(compression());
   app.use((req, _res, next) => {
     req.id = uuidv4();
